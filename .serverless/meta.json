@@ -1,0 +1,202 @@
+{
+  "/Users/aminali/Desktop/instaImage/mc-insta-image-service/serverless.yml": {
+    "versionFramework": "4.9.0",
+    "servicePath": "/Users/aminali/Desktop/instaImage/mc-insta-image-service/serverless.yml",
+    "serviceConfigFileName": "serverless.yml",
+    "service": {
+      "service": "image-upload-service",
+      "provider": {
+        "name": "aws",
+        "runtime": "python3.7",
+        "stage": "dev",
+        "region": "us-east-1",
+        "environment": {
+          "AWS_ACCESS_KEY_ID": "<REDACTED>",
+          "AWS_SECRET_ACCESS_KEY": "<REDACTED>",
+          "AWS_DEFAULT_REGION": "us-east-1"
+        },
+        "versionFunctions": true
+      },
+      "plugins": [
+        "serverless-localstack"
+      ],
+      "custom": {
+        "localstack": {
+          "stages": [
+            "dev"
+          ],
+          "endpoints": {
+            "s3": "http://localhost:4566",
+            "dynamodb": "http://localhost:4566",
+            "lambda": "http://localhost:4566",
+            "apiGateway": "http://localhost:4566"
+          },
+          "debug": true,
+          "lambda": {
+            "mountCode": true
+          }
+        }
+      },
+      "functions": {
+        "uploadImage": {
+          "handler": "src.upload_image.upload_image",
+          "events": [
+            {
+              "http": {
+                "path": "upload",
+                "method": "post"
+              }
+            }
+          ],
+          "name": "image-upload-service-dev-uploadImage"
+        },
+        "listImages": {
+          "handler": "src.list_images.list_images",
+          "events": [
+            {
+              "http": {
+                "path": "images",
+                "method": "get"
+              }
+            }
+          ],
+          "name": "image-upload-service-dev-listImages"
+        },
+        "viewImage": {
+          "handler": "src.view_image.view_image",
+          "events": [
+            {
+              "http": {
+                "path": "images/{image_id}",
+                "method": "get"
+              }
+            }
+          ],
+          "name": "image-upload-service-dev-viewImage"
+        },
+        "deleteImage": {
+          "handler": "src.delete_image.delete_image",
+          "events": [
+            {
+              "http": {
+                "path": "images/{image_id}",
+                "method": "delete"
+              }
+            }
+          ],
+          "name": "image-upload-service-dev-deleteImage"
+        }
+      },
+      "resources": {
+        "Resources": {
+          "ImagesBucket": {
+            "Type": "AWS::S3::Bucket",
+            "Properties": {
+              "BucketName": "mc-image-insta-uploader"
+            }
+          },
+          "ImagesTable": {
+            "Type": "AWS::DynamoDB::Table",
+            "Properties": {
+              "TableName": "ImagesMetadata",
+              "AttributeDefinitions": [
+                {
+                  "AttributeName": "ImageID",
+                  "AttributeType": "S"
+                }
+              ],
+              "KeySchema": [
+                {
+                  "AttributeName": "ImageID",
+                  "KeyType": "HASH"
+                }
+              ],
+              "ProvisionedThroughput": {
+                "ReadCapacityUnits": 5,
+                "WriteCapacityUnits": 5
+              }
+            }
+          }
+        }
+      }
+    },
+    "provider": {
+      "name": "aws",
+      "runtime": "python3.7",
+      "stage": "dev",
+      "region": "us-east-1",
+      "environment": {
+        "AWS_ACCESS_KEY_ID": "<REDACTED>",
+        "AWS_SECRET_ACCESS_KEY": "<REDACTED>",
+        "AWS_DEFAULT_REGION": "us-east-1"
+      },
+      "versionFunctions": true
+    },
+    "dashboard": {
+      "isEnabledForService": false,
+      "requiredAuthentication": false,
+      "orgFeaturesInUse": null,
+      "orgObservabilityIntegrations": null,
+      "serviceAppId": null,
+      "serviceProvider": null,
+      "instanceParameters": null
+    },
+    "error": {
+      "message": "API for service 'ecr' not yet implemented or pro feature - please check https://docs.localstack.cloud/references/coverage/ for further information",
+      "stack": "ServerlessError2: API for service 'ecr' not yet implemented or pro feature - please check https://docs.localstack.cloud/references/coverage/ for further information\n    at file:///Users/aminali/.serverless/releases/4.9.0/package/dist/sf-core.js:587:36\n    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)\n    at async persistentRequest (file:///Users/aminali/.serverless/releases/4.9.0/package/dist/sf-core.js:586:1958)",
+      "code": "AWS_E_C_R_DESCRIBE_REPOSITORIES_INTERNAL_FAILURE"
+    },
+    "serviceRawFile": "service: image-upload-service\n\nprovider:\n  name: aws\n  runtime: python3.7\n  stage: dev\n  region: us-east-1\n  environment:\n    AWS_ACCESS_KEY_ID: test\n    AWS_SECRET_ACCESS_KEY: test\n    AWS_DEFAULT_REGION: us-east-1\n\nplugins:\n  - serverless-localstack\n\ncustom:\n  localstack:\n    stages:\n      - dev\n    endpoints:\n      s3: http://localhost:4566\n      dynamodb: http://localhost:4566\n      lambda: http://localhost:4566\n      apiGateway: http://localhost:4566\n    debug: true\n    lambda:\n      mountCode: true  # Optional: Allows Lambda code mounting for local testing\n\nfunctions:\n  uploadImage:\n    handler: src.upload_image.upload_image\n    events:\n      - http:\n          path: upload\n          method: post\n  listImages:\n    handler: src.list_images.list_images\n    events:\n      - http:\n          path: images\n          method: get\n  viewImage:\n    handler: src.view_image.view_image\n    events:\n      - http:\n          path: images/{image_id}\n          method: get\n  deleteImage:\n    handler: src.delete_image.delete_image\n    events:\n      - http:\n          path: images/{image_id}\n          method: delete\n\nresources:\n  Resources:\n    ImagesBucket:\n      Type: AWS::S3::Bucket\n      Properties:\n        BucketName: mc-image-insta-uploader\n    ImagesTable:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: ImagesMetadata\n        AttributeDefinitions:\n          - AttributeName: ImageID\n            AttributeType: S\n        KeySchema:\n          - AttributeName: ImageID\n            KeyType: HASH\n        ProvisionedThroughput:\n          ReadCapacityUnits: 5\n          WriteCapacityUnits: 5\n",
+    "command": [
+      "remove"
+    ],
+    "options": {},
+    "orgId": "459473cd-c7ec-4270-9ae2-d652ea249de7",
+    "orgName": "justchange",
+    "userId": "ZCRcKhKcrV1b7vGHng",
+    "userName": "justchange",
+    "serviceProviderAwsAccountId": "000000000000",
+    "serviceProviderAwsCfStackName": "image-upload-service-dev",
+    "serviceProviderAwsCfStackId": "arn:aws:cloudformation:us-east-1:000000000000:stack/image-upload-service-dev/426e52f9",
+    "serviceProviderAwsCfStackCreated": "2025-03-22T10:53:01.047Z",
+    "serviceProviderAwsCfStackUpdated": "2025-03-22T11:41:21.580Z",
+    "serviceProviderAwsCfStackStatus": "UPDATE_COMPLETE",
+    "serviceProviderAwsCfStackOutputs": [
+      {
+        "OutputKey": "ServerlessDeploymentBucketName",
+        "OutputValue": "serverless-framework-deployments-us-east-1-2b844afd-8474",
+        "ExportName": "sls-image-upload-service-dev-ServerlessDeploymentBucketName"
+      },
+      {
+        "OutputKey": "UploadImageLambdaFunctionQualifiedArn",
+        "OutputValue": "arn:aws:lambda:us-east-1:000000000000:function:image-upload-service-dev-uploadImage:1",
+        "Description": "Current Lambda function version",
+        "ExportName": "sls-image-upload-service-dev-UploadImageLambdaFunctionQualifiedArn"
+      },
+      {
+        "OutputKey": "ListImagesLambdaFunctionQualifiedArn",
+        "OutputValue": "arn:aws:lambda:us-east-1:000000000000:function:image-upload-service-dev-listImages:1",
+        "Description": "Current Lambda function version",
+        "ExportName": "sls-image-upload-service-dev-ListImagesLambdaFunctionQualifiedArn"
+      },
+      {
+        "OutputKey": "ViewImageLambdaFunctionQualifiedArn",
+        "OutputValue": "arn:aws:lambda:us-east-1:000000000000:function:image-upload-service-dev-viewImage:1",
+        "Description": "Current Lambda function version",
+        "ExportName": "sls-image-upload-service-dev-ViewImageLambdaFunctionQualifiedArn"
+      },
+      {
+        "OutputKey": "DeleteImageLambdaFunctionQualifiedArn",
+        "OutputValue": "arn:aws:lambda:us-east-1:000000000000:function:image-upload-service-dev-deleteImage:1",
+        "Description": "Current Lambda function version",
+        "ExportName": "sls-image-upload-service-dev-DeleteImageLambdaFunctionQualifiedArn"
+      },
+      {
+        "OutputKey": "ServiceEndpoint",
+        "OutputValue": "https://0gzs7dkvga.execute-api.localhost.localstack.cloud:4566/dev",
+        "Description": "URL of the service endpoint",
+        "ExportName": "sls-image-upload-service-dev-ServiceEndpoint"
+      }
+    ]
+  }
+}

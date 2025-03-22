@@ -1,0 +1,73 @@
+service: image-upload-service
+
+provider:
+  name: aws
+  runtime: python3.7
+  stage: dev
+  region: us-east-1
+  environment:
+    AWS_ACCESS_KEY_ID: test
+    AWS_SECRET_ACCESS_KEY: test
+    AWS_DEFAULT_REGION: us-east-1
+
+plugins:
+  - serverless-localstack
+
+custom:
+  localstack:
+    stages:
+      - dev
+    endpoints:
+      s3: http://localhost:4566
+      dynamodb: http://localhost:4566
+      lambda: http://localhost:4566
+      apiGateway: http://localhost:4566
+    debug: true
+    lambda:
+      mountCode: true  # Optional: Allows Lambda code mounting for local testing
+
+functions:
+  uploadImage:
+    handler: src.upload_image.upload_image
+    events:
+      - http:
+          path: upload
+          method: post
+  listImages:
+    handler: src.list_images.list_images
+    events:
+      - http:
+          path: images
+          method: get
+  viewImage:
+    handler: src.view_image.view_image
+    events:
+      - http:
+          path: images/{image_id}
+          method: get
+  deleteImage:
+    handler: src.delete_image.delete_image
+    events:
+      - http:
+          path: images/{image_id}
+          method: delete
+
+resources:
+  Resources:
+    ImagesBucket:
+      Type: AWS::S3::Bucket
+      Properties:
+        BucketName: mc-image-insta-uploader
+    ImagesTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ImagesMetadata
+        AttributeDefinitions:
+          - AttributeName: ImageID
+            AttributeType: S
+        KeySchema:
+          - AttributeName: ImageID
+            KeyType: HASH
+        ProvisionedThroughput:
+          ReadCapacityUnits: 5
+          WriteCapacityUnits: 5
