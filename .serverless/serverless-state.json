@@ -6,15 +6,35 @@
     },
     "provider": {
       "name": "aws",
-      "runtime": "python3.7",
+      "runtime": "python3.9",
       "stage": "dev",
       "region": "us-east-1",
-      "environment": {
-        "AWS_ACCESS_KEY_ID": "test",
-        "AWS_SECRET_ACCESS_KEY": "test",
-        "AWS_DEFAULT_REGION": "us-east-1"
-      },
+      "iamRoleStatements": [
+        {
+          "Effect": "Allow",
+          "Action": [
+            "s3:PutObject",
+            "s3:GetObject",
+            "s3:DeleteObject"
+          ],
+          "Resource": [
+            "arn:aws:s3:::mc-image-insta-uploaders/images/*",
+            "arn:aws:s3:::mc-image-insta-uploaders/*"
+          ]
+        },
+        {
+          "Effect": "Allow",
+          "Action": [
+            "dynamodb:PutItem",
+            "dynamodb:GetItem",
+            "dynamodb:Scan",
+            "dynamodb:DeleteItem"
+          ],
+          "Resource": "arn:aws:dynamodb:us-east-1:061039779923:table/ImagesMetadata"
+        }
+      ],
       "versionFunctions": true,
+      "environment": null,
       "compiledCloudFormationTemplate": {
         "AWSTemplateFormatVersion": "2010-09-09",
         "Description": "The AWS CloudFormation template for this Serverless application",
@@ -100,6 +120,12 @@
                             "Fn::Sub": "arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/image-upload-service-dev*:*:*"
                           }
                         ]
+                      },
+                      {
+                        "$ref": "$[\"service\"][\"provider\"][\"iamRoleStatements\"][0]"
+                      },
+                      {
+                        "$ref": "$[\"service\"][\"provider\"][\"iamRoleStatements\"][1]"
                       }
                     ]
                   }
@@ -125,21 +151,14 @@
             "Type": "AWS::Lambda::Function",
             "Properties": {
               "Code": {
-                "S3Bucket": "hot-reload",
-                "S3Key": "/Users/aminali/Desktop/instaImage/mc-insta-image-service"
+                "S3Bucket": "serverless-framework-deployments-us-east-1-a1ba091e-5054",
+                "S3Key": "serverless/image-upload-service/dev/1743052861339-2025-03-27T05:21:01.339Z/image-upload-service.zip"
               },
               "Handler": "src.upload_image.upload_image",
-              "Runtime": "python3.7",
+              "Runtime": "python3.9",
               "FunctionName": "image-upload-service-dev-uploadImage",
               "MemorySize": 1024,
               "Timeout": 6,
-              "Environment": {
-                "Variables": {
-                  "AWS_ACCESS_KEY_ID": "test",
-                  "AWS_SECRET_ACCESS_KEY": "test",
-                  "AWS_DEFAULT_REGION": "us-east-1"
-                }
-              },
               "Role": {
                 "Fn::GetAtt": [
                   "IamRoleLambdaExecution",
@@ -155,21 +174,14 @@
             "Type": "AWS::Lambda::Function",
             "Properties": {
               "Code": {
-                "S3Bucket": "hot-reload",
-                "S3Key": "/Users/aminali/Desktop/instaImage/mc-insta-image-service"
+                "S3Bucket": "serverless-framework-deployments-us-east-1-a1ba091e-5054",
+                "S3Key": "serverless/image-upload-service/dev/1743052861339-2025-03-27T05:21:01.339Z/image-upload-service.zip"
               },
               "Handler": "src.list_images.list_images",
-              "Runtime": "python3.7",
+              "Runtime": "python3.9",
               "FunctionName": "image-upload-service-dev-listImages",
               "MemorySize": 1024,
               "Timeout": 6,
-              "Environment": {
-                "Variables": {
-                  "AWS_ACCESS_KEY_ID": "test",
-                  "AWS_SECRET_ACCESS_KEY": "test",
-                  "AWS_DEFAULT_REGION": "us-east-1"
-                }
-              },
               "Role": {
                 "Fn::GetAtt": [
                   "IamRoleLambdaExecution",
@@ -185,21 +197,14 @@
             "Type": "AWS::Lambda::Function",
             "Properties": {
               "Code": {
-                "S3Bucket": "hot-reload",
-                "S3Key": "/Users/aminali/Desktop/instaImage/mc-insta-image-service"
+                "S3Bucket": "serverless-framework-deployments-us-east-1-a1ba091e-5054",
+                "S3Key": "serverless/image-upload-service/dev/1743052861339-2025-03-27T05:21:01.339Z/image-upload-service.zip"
               },
               "Handler": "src.view_image.view_image",
-              "Runtime": "python3.7",
+              "Runtime": "python3.9",
               "FunctionName": "image-upload-service-dev-viewImage",
               "MemorySize": 1024,
               "Timeout": 6,
-              "Environment": {
-                "Variables": {
-                  "AWS_ACCESS_KEY_ID": "test",
-                  "AWS_SECRET_ACCESS_KEY": "test",
-                  "AWS_DEFAULT_REGION": "us-east-1"
-                }
-              },
               "Role": {
                 "Fn::GetAtt": [
                   "IamRoleLambdaExecution",
@@ -215,21 +220,14 @@
             "Type": "AWS::Lambda::Function",
             "Properties": {
               "Code": {
-                "S3Bucket": "hot-reload",
-                "S3Key": "/Users/aminali/Desktop/instaImage/mc-insta-image-service"
+                "S3Bucket": "serverless-framework-deployments-us-east-1-a1ba091e-5054",
+                "S3Key": "serverless/image-upload-service/dev/1743052861339-2025-03-27T05:21:01.339Z/image-upload-service.zip"
               },
               "Handler": "src.delete_image.delete_image",
-              "Runtime": "python3.7",
+              "Runtime": "python3.9",
               "FunctionName": "image-upload-service-dev-deleteImage",
               "MemorySize": 1024,
               "Timeout": 6,
-              "Environment": {
-                "Variables": {
-                  "AWS_ACCESS_KEY_ID": "test",
-                  "AWS_SECRET_ACCESS_KEY": "test",
-                  "AWS_DEFAULT_REGION": "us-east-1"
-                }
-              },
               "Role": {
                 "Fn::GetAtt": [
                   "IamRoleLambdaExecution",
@@ -241,44 +239,44 @@
               "DeleteImageLogGroup"
             ]
           },
-          "UploadImageLambdaVersionrIkBTzW5u0q4R7hzVYxTJEDzhGgSsjhLVsMQhBaik": {
+          "UploadImageLambdaVersionW4NLgSUTGyX2SmNRgQaiva8Hf2vgRpu8EIALHbIZUkI": {
             "Type": "AWS::Lambda::Version",
             "DeletionPolicy": "Retain",
             "Properties": {
               "FunctionName": {
                 "Ref": "UploadImageLambdaFunction"
               },
-              "CodeSha256": "ULSruH0b009w49xQn/aJHsTNaSkNA9iBTL5kBhZ7rSc="
+              "CodeSha256": "DG1QZ/ns+iI9JWJoit5z5nWstoaURYQc17Wz49wIgYg="
             }
           },
-          "ListImagesLambdaVersionM8aw81qpYsbA7sOnhNAEihlEG5NKE8hcWv11oTE": {
+          "ListImagesLambdaVersionhZuPUN05puc2wXVtixnuKNT16cUIYJ301urnBWWrOTY": {
             "Type": "AWS::Lambda::Version",
             "DeletionPolicy": "Retain",
             "Properties": {
               "FunctionName": {
                 "Ref": "ListImagesLambdaFunction"
               },
-              "CodeSha256": "ULSruH0b009w49xQn/aJHsTNaSkNA9iBTL5kBhZ7rSc="
+              "CodeSha256": "DG1QZ/ns+iI9JWJoit5z5nWstoaURYQc17Wz49wIgYg="
             }
           },
-          "ViewImageLambdaVersion07e8emNLYmg19E9jGMusyXJ8MSKfh0xYSlFezgT4NAE": {
+          "ViewImageLambdaVersional4AN5MBO40cZajM5NaDkaczZh3YXVJlHRZ7i3ezJ6g": {
             "Type": "AWS::Lambda::Version",
             "DeletionPolicy": "Retain",
             "Properties": {
               "FunctionName": {
                 "Ref": "ViewImageLambdaFunction"
               },
-              "CodeSha256": "ULSruH0b009w49xQn/aJHsTNaSkNA9iBTL5kBhZ7rSc="
+              "CodeSha256": "DG1QZ/ns+iI9JWJoit5z5nWstoaURYQc17Wz49wIgYg="
             }
           },
-          "DeleteImageLambdaVersionsZsaF4lOPBS6lvTYDM8FsMRVtwY0tMcG3tMLzk6Jk": {
+          "DeleteImageLambdaVersionuRG2aN2l7vgpRuCNun1qzCZTQ0a2X62DN50njI5d3Os": {
             "Type": "AWS::Lambda::Version",
             "DeletionPolicy": "Retain",
             "Properties": {
               "FunctionName": {
                 "Ref": "DeleteImageLambdaFunction"
               },
-              "CodeSha256": "ULSruH0b009w49xQn/aJHsTNaSkNA9iBTL5kBhZ7rSc="
+              "CodeSha256": "DG1QZ/ns+iI9JWJoit5z5nWstoaURYQc17Wz49wIgYg="
             }
           },
           "ApiGatewayRestApi": {
@@ -519,7 +517,7 @@
               "DeleteImageLambdaPermissionApiGateway"
             ]
           },
-          "ApiGatewayDeployment1742643677074": {
+          "ApiGatewayDeployment1743052851863": {
             "Type": "AWS::ApiGateway::Deployment",
             "Properties": {
               "RestApiId": {
@@ -685,7 +683,7 @@
           "ImagesBucket": {
             "Type": "AWS::S3::Bucket",
             "Properties": {
-              "BucketName": "mc-image-insta-uploader"
+              "BucketName": "mc-image-insta-uploaders"
             }
           },
           "ImagesTable": {
@@ -713,7 +711,7 @@
         },
         "Outputs": {
           "ServerlessDeploymentBucketName": {
-            "Value": "serverless-framework-deployments-us-east-1-2b844afd-8474",
+            "Value": "serverless-framework-deployments-us-east-1-a1ba091e-5054",
             "Export": {
               "Name": "sls-image-upload-service-dev-ServerlessDeploymentBucketName"
             }
@@ -721,7 +719,7 @@
           "UploadImageLambdaFunctionQualifiedArn": {
             "Description": "Current Lambda function version",
             "Value": {
-              "Ref": "UploadImageLambdaVersionrIkBTzW5u0q4R7hzVYxTJEDzhGgSsjhLVsMQhBaik"
+              "Ref": "UploadImageLambdaVersionW4NLgSUTGyX2SmNRgQaiva8Hf2vgRpu8EIALHbIZUkI"
             },
             "Export": {
               "Name": "sls-image-upload-service-dev-UploadImageLambdaFunctionQualifiedArn"
@@ -730,7 +728,7 @@
           "ListImagesLambdaFunctionQualifiedArn": {
             "Description": "Current Lambda function version",
             "Value": {
-              "Ref": "ListImagesLambdaVersionM8aw81qpYsbA7sOnhNAEihlEG5NKE8hcWv11oTE"
+              "Ref": "ListImagesLambdaVersionhZuPUN05puc2wXVtixnuKNT16cUIYJ301urnBWWrOTY"
             },
             "Export": {
               "Name": "sls-image-upload-service-dev-ListImagesLambdaFunctionQualifiedArn"
@@ -739,7 +737,7 @@
           "ViewImageLambdaFunctionQualifiedArn": {
             "Description": "Current Lambda function version",
             "Value": {
-              "Ref": "ViewImageLambdaVersion07e8emNLYmg19E9jGMusyXJ8MSKfh0xYSlFezgT4NAE"
+              "Ref": "ViewImageLambdaVersional4AN5MBO40cZajM5NaDkaczZh3YXVJlHRZ7i3ezJ6g"
             },
             "Export": {
               "Name": "sls-image-upload-service-dev-ViewImageLambdaFunctionQualifiedArn"
@@ -748,7 +746,7 @@
           "DeleteImageLambdaFunctionQualifiedArn": {
             "Description": "Current Lambda function version",
             "Value": {
-              "Ref": "DeleteImageLambdaVersionsZsaF4lOPBS6lvTYDM8FsMRVtwY0tMcG3tMLzk6Jk"
+              "Ref": "DeleteImageLambdaVersionuRG2aN2l7vgpRuCNun1qzCZTQ0a2X62DN50njI5d3Os"
             },
             "Export": {
               "Name": "sls-image-upload-service-dev-DeleteImageLambdaFunctionQualifiedArn"
@@ -784,26 +782,6 @@
       },
       "vpc": {}
     },
-    "custom": {
-      "localstack": {
-        "stages": [
-          "dev"
-        ],
-        "endpoints": {
-          "s3": "http://localhost:4566",
-          "dynamodb": "http://localhost:4566",
-          "lambda": "http://localhost:4566",
-          "apiGateway": "http://localhost:4566"
-        },
-        "debug": true,
-        "lambda": {
-          "mountCode": true
-        }
-      }
-    },
-    "plugins": [
-      "serverless-localstack"
-    ],
     "pluginsData": {},
     "functions": {
       "uploadImage": {
@@ -818,14 +796,12 @@
           }
         ],
         "name": "image-upload-service-dev-uploadImage",
-        "package": {
-          "artifact": "/Users/aminali/node_modules/serverless-localstack/src/index.js"
-        },
+        "package": {},
         "memory": 1024,
         "timeout": 6,
-        "runtime": "python3.7",
+        "runtime": "python3.9",
         "vpc": {},
-        "versionLogicalId": "UploadImageLambdaVersionrIkBTzW5u0q4R7hzVYxTJEDzhGgSsjhLVsMQhBaik"
+        "versionLogicalId": "UploadImageLambdaVersionW4NLgSUTGyX2SmNRgQaiva8Hf2vgRpu8EIALHbIZUkI"
       },
       "listImages": {
         "handler": "src.list_images.list_images",
@@ -839,14 +815,12 @@
           }
         ],
         "name": "image-upload-service-dev-listImages",
-        "package": {
-          "artifact": "/Users/aminali/node_modules/serverless-localstack/src/index.js"
-        },
+        "package": {},
         "memory": 1024,
         "timeout": 6,
-        "runtime": "python3.7",
+        "runtime": "python3.9",
         "vpc": {},
-        "versionLogicalId": "ListImagesLambdaVersionM8aw81qpYsbA7sOnhNAEihlEG5NKE8hcWv11oTE"
+        "versionLogicalId": "ListImagesLambdaVersionhZuPUN05puc2wXVtixnuKNT16cUIYJ301urnBWWrOTY"
       },
       "viewImage": {
         "handler": "src.view_image.view_image",
@@ -860,14 +834,12 @@
           }
         ],
         "name": "image-upload-service-dev-viewImage",
-        "package": {
-          "artifact": "/Users/aminali/node_modules/serverless-localstack/src/index.js"
-        },
+        "package": {},
         "memory": 1024,
         "timeout": 6,
-        "runtime": "python3.7",
+        "runtime": "python3.9",
         "vpc": {},
-        "versionLogicalId": "ViewImageLambdaVersion07e8emNLYmg19E9jGMusyXJ8MSKfh0xYSlFezgT4NAE"
+        "versionLogicalId": "ViewImageLambdaVersional4AN5MBO40cZajM5NaDkaczZh3YXVJlHRZ7i3ezJ6g"
       },
       "deleteImage": {
         "handler": "src.delete_image.delete_image",
@@ -881,14 +853,12 @@
           }
         ],
         "name": "image-upload-service-dev-deleteImage",
-        "package": {
-          "artifact": "/Users/aminali/node_modules/serverless-localstack/src/index.js"
-        },
+        "package": {},
         "memory": 1024,
         "timeout": 6,
-        "runtime": "python3.7",
+        "runtime": "python3.9",
         "vpc": {},
-        "versionLogicalId": "DeleteImageLambdaVersionsZsaF4lOPBS6lvTYDM8FsMRVtwY0tMcG3tMLzk6Jk"
+        "versionLogicalId": "DeleteImageLambdaVersionuRG2aN2l7vgpRuCNun1qzCZTQ0a2X62DN50njI5d3Os"
       }
     },
     "resources": {
@@ -896,7 +866,7 @@
         "ImagesBucket": {
           "Type": "AWS::S3::Bucket",
           "Properties": {
-            "BucketName": "mc-image-insta-uploader"
+            "BucketName": "mc-image-insta-uploaders"
           }
         },
         "ImagesTable": {
@@ -931,12 +901,6 @@
       "provider": {
         "$ref": "$[\"service\"][\"provider\"]"
       },
-      "plugins": {
-        "$ref": "$[\"service\"][\"plugins\"]"
-      },
-      "custom": {
-        "$ref": "$[\"service\"][\"custom\"]"
-      },
       "functions": {
         "$ref": "$[\"service\"][\"functions\"]"
       },
@@ -950,7 +914,7 @@
     "artifact": "/Users/aminali/Desktop/instaImage/mc-insta-image-service/.serverless/image-upload-service.zip"
   },
   "package": {
-    "artifactDirectoryName": "serverless/image-upload-service/dev/1742643681415-2025-03-22T11:41:21.415Z",
+    "artifactDirectoryName": "serverless/image-upload-service/dev/1743052861339-2025-03-27T05:21:01.339Z",
     "artifact": "image-upload-service.zip"
   }
 }

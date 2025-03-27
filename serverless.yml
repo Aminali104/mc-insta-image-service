@@ -2,29 +2,31 @@ service: image-upload-service
 
 provider:
   name: aws
-  runtime: python3.7
+  runtime: python3.9
   stage: dev
-  region: us-east-1
+  region: us-east-1  # Region is set here, no need to add it in environment variables
   environment:
-    AWS_ACCESS_KEY_ID: test
-    AWS_SECRET_ACCESS_KEY: test
-    AWS_DEFAULT_REGION: us-east-1
+    # AWS credentials are managed by AWS CLI, no need to include them here
+    # AWS_DEFAULT_REGION removed
+  
+  iamRoleStatements:
+    - Effect: "Allow"
+      Action:
+        - "s3:PutObject"
+        - "s3:GetObject"
+        - "s3:DeleteObject"
+      Resource:
+        - "arn:aws:s3:::mc-image-insta-uploaders/images/*"
+        - "arn:aws:s3:::mc-image-insta-uploaders/*"  # In case you want to grant permission for all objects in the bucket
+    - Effect: "Allow"
+      Action:
+        - "dynamodb:PutItem"
+        - "dynamodb:GetItem"
+        - "dynamodb:Scan"
+        - "dynamodb:DeleteItem"
+      Resource:
+        - "arn:aws:dynamodb:us-east-1:061039779923:table/ImagesMetadata"  # Replace with your DynamoDB table ARN
 
-plugins:
-  - serverless-localstack
-
-custom:
-  localstack:
-    stages:
-      - dev
-    endpoints:
-      s3: http://localhost:4566
-      dynamodb: http://localhost:4566
-      lambda: http://localhost:4566
-      apiGateway: http://localhost:4566
-    debug: true
-    lambda:
-      mountCode: true  # Optional: Allows Lambda code mounting for local testing
 
 functions:
   uploadImage:
@@ -57,7 +59,7 @@ resources:
     ImagesBucket:
       Type: AWS::S3::Bucket
       Properties:
-        BucketName: mc-image-insta-uploader
+        BucketName: mc-image-insta-uploaders
     ImagesTable:
       Type: AWS::DynamoDB::Table
       Properties:

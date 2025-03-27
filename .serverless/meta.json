@@ -1,41 +1,803 @@
 {
   "/Users/aminali/Desktop/instaImage/mc-insta-image-service/serverless.yml": {
-    "versionFramework": "4.9.0",
+    "versionFramework": "4.9.1",
     "servicePath": "/Users/aminali/Desktop/instaImage/mc-insta-image-service/serverless.yml",
     "serviceConfigFileName": "serverless.yml",
     "service": {
       "service": "image-upload-service",
       "provider": {
         "name": "aws",
-        "runtime": "python3.7",
+        "runtime": "python3.9",
         "stage": "dev",
         "region": "us-east-1",
-        "environment": {
-          "AWS_ACCESS_KEY_ID": "<REDACTED>",
-          "AWS_SECRET_ACCESS_KEY": "<REDACTED>",
-          "AWS_DEFAULT_REGION": "us-east-1"
-        },
-        "versionFunctions": true
-      },
-      "plugins": [
-        "serverless-localstack"
-      ],
-      "custom": {
-        "localstack": {
-          "stages": [
-            "dev"
-          ],
-          "endpoints": {
-            "s3": "http://localhost:4566",
-            "dynamodb": "http://localhost:4566",
-            "lambda": "http://localhost:4566",
-            "apiGateway": "http://localhost:4566"
+        "iamRoleStatements": [
+          {
+            "Effect": "Allow",
+            "Action": [
+              "s3:PutObject",
+              "s3:GetObject",
+              "s3:DeleteObject"
+            ],
+            "Resource": [
+              "arn:aws:s3:::mc-image-insta-uploaders/images/*",
+              "arn:aws:s3:::mc-image-insta-uploaders/*"
+            ]
           },
-          "debug": true,
-          "lambda": {
-            "mountCode": true
+          {
+            "Effect": "Allow",
+            "Action": [
+              "dynamodb:PutItem",
+              "dynamodb:GetItem",
+              "dynamodb:Scan",
+              "dynamodb:DeleteItem"
+            ],
+            "Resource": "arn:aws:dynamodb:us-east-1:061039779923:table/ImagesMetadata"
           }
-        }
+        ],
+        "versionFunctions": true,
+        "environment": null,
+        "compiledCloudFormationTemplate": {
+          "AWSTemplateFormatVersion": "2010-09-09",
+          "Description": "The AWS CloudFormation template for this Serverless application",
+          "Resources": {
+            "UploadImageLogGroup": {
+              "Type": "AWS::Logs::LogGroup",
+              "Properties": {
+                "LogGroupName": "/aws/lambda/image-upload-service-dev-uploadImage"
+              }
+            },
+            "ListImagesLogGroup": {
+              "Type": "AWS::Logs::LogGroup",
+              "Properties": {
+                "LogGroupName": "/aws/lambda/image-upload-service-dev-listImages"
+              }
+            },
+            "ViewImageLogGroup": {
+              "Type": "AWS::Logs::LogGroup",
+              "Properties": {
+                "LogGroupName": "/aws/lambda/image-upload-service-dev-viewImage"
+              }
+            },
+            "DeleteImageLogGroup": {
+              "Type": "AWS::Logs::LogGroup",
+              "Properties": {
+                "LogGroupName": "/aws/lambda/image-upload-service-dev-deleteImage"
+              }
+            },
+            "IamRoleLambdaExecution": {
+              "Type": "AWS::IAM::Role",
+              "Properties": {
+                "AssumeRolePolicyDocument": {
+                  "Version": "2012-10-17",
+                  "Statement": [
+                    {
+                      "Effect": "Allow",
+                      "Principal": {
+                        "Service": [
+                          "lambda.amazonaws.com"
+                        ]
+                      },
+                      "Action": [
+                        "sts:AssumeRole"
+                      ]
+                    }
+                  ]
+                },
+                "Policies": [
+                  {
+                    "PolicyName": {
+                      "Fn::Join": [
+                        "-",
+                        [
+                          "image-upload-service",
+                          "dev",
+                          "lambda"
+                        ]
+                      ]
+                    },
+                    "PolicyDocument": {
+                      "Version": "2012-10-17",
+                      "Statement": [
+                        {
+                          "Effect": "Allow",
+                          "Action": [
+                            "logs:CreateLogStream",
+                            "logs:CreateLogGroup",
+                            "logs:TagResource"
+                          ],
+                          "Resource": [
+                            {
+                              "Fn::Sub": "arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/image-upload-service-dev*:*"
+                            }
+                          ]
+                        },
+                        {
+                          "Effect": "Allow",
+                          "Action": [
+                            "logs:PutLogEvents"
+                          ],
+                          "Resource": [
+                            {
+                              "Fn::Sub": "arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/image-upload-service-dev*:*:*"
+                            }
+                          ]
+                        },
+                        {
+                          "Effect": "Allow",
+                          "Action": [
+                            "s3:PutObject",
+                            "s3:GetObject",
+                            "s3:DeleteObject"
+                          ],
+                          "Resource": [
+                            "arn:aws:s3:::mc-image-insta-uploaders/images/*",
+                            "arn:aws:s3:::mc-image-insta-uploaders/*"
+                          ]
+                        },
+                        {
+                          "Effect": "Allow",
+                          "Action": [
+                            "dynamodb:PutItem",
+                            "dynamodb:GetItem",
+                            "dynamodb:Scan",
+                            "dynamodb:DeleteItem"
+                          ],
+                          "Resource": "arn:aws:dynamodb:us-east-1:061039779923:table/ImagesMetadata"
+                        }
+                      ]
+                    }
+                  }
+                ],
+                "Path": "/",
+                "RoleName": {
+                  "Fn::Join": [
+                    "-",
+                    [
+                      "image-upload-service",
+                      "dev",
+                      {
+                        "Ref": "AWS::Region"
+                      },
+                      "lambdaRole"
+                    ]
+                  ]
+                }
+              }
+            },
+            "UploadImageLambdaFunction": {
+              "Type": "AWS::Lambda::Function",
+              "Properties": {
+                "Code": {
+                  "S3Bucket": "serverless-framework-deployments-us-east-1-a1ba091e-5054",
+                  "S3Key": "serverless/image-upload-service/dev/1743052861339-2025-03-27T05:21:01.339Z/image-upload-service.zip"
+                },
+                "Handler": "src.upload_image.upload_image",
+                "Runtime": "python3.9",
+                "FunctionName": "image-upload-service-dev-uploadImage",
+                "MemorySize": 1024,
+                "Timeout": 6,
+                "Role": {
+                  "Fn::GetAtt": [
+                    "IamRoleLambdaExecution",
+                    "Arn"
+                  ]
+                }
+              },
+              "DependsOn": [
+                "UploadImageLogGroup"
+              ]
+            },
+            "ListImagesLambdaFunction": {
+              "Type": "AWS::Lambda::Function",
+              "Properties": {
+                "Code": {
+                  "S3Bucket": "serverless-framework-deployments-us-east-1-a1ba091e-5054",
+                  "S3Key": "serverless/image-upload-service/dev/1743052861339-2025-03-27T05:21:01.339Z/image-upload-service.zip"
+                },
+                "Handler": "src.list_images.list_images",
+                "Runtime": "python3.9",
+                "FunctionName": "image-upload-service-dev-listImages",
+                "MemorySize": 1024,
+                "Timeout": 6,
+                "Role": {
+                  "Fn::GetAtt": [
+                    "IamRoleLambdaExecution",
+                    "Arn"
+                  ]
+                }
+              },
+              "DependsOn": [
+                "ListImagesLogGroup"
+              ]
+            },
+            "ViewImageLambdaFunction": {
+              "Type": "AWS::Lambda::Function",
+              "Properties": {
+                "Code": {
+                  "S3Bucket": "serverless-framework-deployments-us-east-1-a1ba091e-5054",
+                  "S3Key": "serverless/image-upload-service/dev/1743052861339-2025-03-27T05:21:01.339Z/image-upload-service.zip"
+                },
+                "Handler": "src.view_image.view_image",
+                "Runtime": "python3.9",
+                "FunctionName": "image-upload-service-dev-viewImage",
+                "MemorySize": 1024,
+                "Timeout": 6,
+                "Role": {
+                  "Fn::GetAtt": [
+                    "IamRoleLambdaExecution",
+                    "Arn"
+                  ]
+                }
+              },
+              "DependsOn": [
+                "ViewImageLogGroup"
+              ]
+            },
+            "DeleteImageLambdaFunction": {
+              "Type": "AWS::Lambda::Function",
+              "Properties": {
+                "Code": {
+                  "S3Bucket": "serverless-framework-deployments-us-east-1-a1ba091e-5054",
+                  "S3Key": "serverless/image-upload-service/dev/1743052861339-2025-03-27T05:21:01.339Z/image-upload-service.zip"
+                },
+                "Handler": "src.delete_image.delete_image",
+                "Runtime": "python3.9",
+                "FunctionName": "image-upload-service-dev-deleteImage",
+                "MemorySize": 1024,
+                "Timeout": 6,
+                "Role": {
+                  "Fn::GetAtt": [
+                    "IamRoleLambdaExecution",
+                    "Arn"
+                  ]
+                }
+              },
+              "DependsOn": [
+                "DeleteImageLogGroup"
+              ]
+            },
+            "UploadImageLambdaVersionW4NLgSUTGyX2SmNRgQaiva8Hf2vgRpu8EIALHbIZUkI": {
+              "Type": "AWS::Lambda::Version",
+              "DeletionPolicy": "Retain",
+              "Properties": {
+                "FunctionName": {
+                  "Ref": "UploadImageLambdaFunction"
+                },
+                "CodeSha256": "DG1QZ/ns+iI9JWJoit5z5nWstoaURYQc17Wz49wIgYg="
+              }
+            },
+            "ListImagesLambdaVersionhZuPUN05puc2wXVtixnuKNT16cUIYJ301urnBWWrOTY": {
+              "Type": "AWS::Lambda::Version",
+              "DeletionPolicy": "Retain",
+              "Properties": {
+                "FunctionName": {
+                  "Ref": "ListImagesLambdaFunction"
+                },
+                "CodeSha256": "DG1QZ/ns+iI9JWJoit5z5nWstoaURYQc17Wz49wIgYg="
+              }
+            },
+            "ViewImageLambdaVersional4AN5MBO40cZajM5NaDkaczZh3YXVJlHRZ7i3ezJ6g": {
+              "Type": "AWS::Lambda::Version",
+              "DeletionPolicy": "Retain",
+              "Properties": {
+                "FunctionName": {
+                  "Ref": "ViewImageLambdaFunction"
+                },
+                "CodeSha256": "DG1QZ/ns+iI9JWJoit5z5nWstoaURYQc17Wz49wIgYg="
+              }
+            },
+            "DeleteImageLambdaVersionuRG2aN2l7vgpRuCNun1qzCZTQ0a2X62DN50njI5d3Os": {
+              "Type": "AWS::Lambda::Version",
+              "DeletionPolicy": "Retain",
+              "Properties": {
+                "FunctionName": {
+                  "Ref": "DeleteImageLambdaFunction"
+                },
+                "CodeSha256": "DG1QZ/ns+iI9JWJoit5z5nWstoaURYQc17Wz49wIgYg="
+              }
+            },
+            "ApiGatewayRestApi": {
+              "Type": "AWS::ApiGateway::RestApi",
+              "Properties": {
+                "Name": "dev-image-upload-service",
+                "EndpointConfiguration": {
+                  "Types": [
+                    "EDGE"
+                  ]
+                },
+                "Policy": ""
+              }
+            },
+            "ApiGatewayResourceUpload": {
+              "Type": "AWS::ApiGateway::Resource",
+              "Properties": {
+                "ParentId": {
+                  "Fn::GetAtt": [
+                    "ApiGatewayRestApi",
+                    "RootResourceId"
+                  ]
+                },
+                "PathPart": "upload",
+                "RestApiId": {
+                  "Ref": "ApiGatewayRestApi"
+                }
+              }
+            },
+            "ApiGatewayResourceImages": {
+              "Type": "AWS::ApiGateway::Resource",
+              "Properties": {
+                "ParentId": {
+                  "Fn::GetAtt": [
+                    "ApiGatewayRestApi",
+                    "RootResourceId"
+                  ]
+                },
+                "PathPart": "images",
+                "RestApiId": {
+                  "Ref": "ApiGatewayRestApi"
+                }
+              }
+            },
+            "ApiGatewayResourceImagesImageidVar": {
+              "Type": "AWS::ApiGateway::Resource",
+              "Properties": {
+                "ParentId": {
+                  "Ref": "ApiGatewayResourceImages"
+                },
+                "PathPart": "{image_id}",
+                "RestApiId": {
+                  "Ref": "ApiGatewayRestApi"
+                }
+              }
+            },
+            "ApiGatewayMethodUploadPost": {
+              "Type": "AWS::ApiGateway::Method",
+              "Properties": {
+                "HttpMethod": "POST",
+                "RequestParameters": {},
+                "ResourceId": {
+                  "Ref": "ApiGatewayResourceUpload"
+                },
+                "RestApiId": {
+                  "Ref": "ApiGatewayRestApi"
+                },
+                "ApiKeyRequired": "<REDACTED>",
+                "AuthorizationType": "NONE",
+                "Integration": {
+                  "IntegrationHttpMethod": "POST",
+                  "Type": "AWS_PROXY",
+                  "Uri": {
+                    "Fn::Join": [
+                      "",
+                      [
+                        "arn:",
+                        {
+                          "Ref": "AWS::Partition"
+                        },
+                        ":apigateway:",
+                        {
+                          "Ref": "AWS::Region"
+                        },
+                        ":lambda:path/2015-03-31/functions/",
+                        {
+                          "Fn::GetAtt": [
+                            "UploadImageLambdaFunction",
+                            "Arn"
+                          ]
+                        },
+                        "/invocations"
+                      ]
+                    ]
+                  }
+                },
+                "MethodResponses": []
+              },
+              "DependsOn": [
+                "UploadImageLambdaPermissionApiGateway"
+              ]
+            },
+            "ApiGatewayMethodImagesGet": {
+              "Type": "AWS::ApiGateway::Method",
+              "Properties": {
+                "HttpMethod": "GET",
+                "RequestParameters": {},
+                "ResourceId": {
+                  "Ref": "ApiGatewayResourceImages"
+                },
+                "RestApiId": {
+                  "Ref": "ApiGatewayRestApi"
+                },
+                "ApiKeyRequired": "<REDACTED>",
+                "AuthorizationType": "NONE",
+                "Integration": {
+                  "IntegrationHttpMethod": "POST",
+                  "Type": "AWS_PROXY",
+                  "Uri": {
+                    "Fn::Join": [
+                      "",
+                      [
+                        "arn:",
+                        {
+                          "Ref": "AWS::Partition"
+                        },
+                        ":apigateway:",
+                        {
+                          "Ref": "AWS::Region"
+                        },
+                        ":lambda:path/2015-03-31/functions/",
+                        {
+                          "Fn::GetAtt": [
+                            "ListImagesLambdaFunction",
+                            "Arn"
+                          ]
+                        },
+                        "/invocations"
+                      ]
+                    ]
+                  }
+                },
+                "MethodResponses": []
+              },
+              "DependsOn": [
+                "ListImagesLambdaPermissionApiGateway"
+              ]
+            },
+            "ApiGatewayMethodImagesImageidVarGet": {
+              "Type": "AWS::ApiGateway::Method",
+              "Properties": {
+                "HttpMethod": "GET",
+                "RequestParameters": {},
+                "ResourceId": {
+                  "Ref": "ApiGatewayResourceImagesImageidVar"
+                },
+                "RestApiId": {
+                  "Ref": "ApiGatewayRestApi"
+                },
+                "ApiKeyRequired": "<REDACTED>",
+                "AuthorizationType": "NONE",
+                "Integration": {
+                  "IntegrationHttpMethod": "POST",
+                  "Type": "AWS_PROXY",
+                  "Uri": {
+                    "Fn::Join": [
+                      "",
+                      [
+                        "arn:",
+                        {
+                          "Ref": "AWS::Partition"
+                        },
+                        ":apigateway:",
+                        {
+                          "Ref": "AWS::Region"
+                        },
+                        ":lambda:path/2015-03-31/functions/",
+                        {
+                          "Fn::GetAtt": [
+                            "ViewImageLambdaFunction",
+                            "Arn"
+                          ]
+                        },
+                        "/invocations"
+                      ]
+                    ]
+                  }
+                },
+                "MethodResponses": []
+              },
+              "DependsOn": [
+                "ViewImageLambdaPermissionApiGateway"
+              ]
+            },
+            "ApiGatewayMethodImagesImageidVarDelete": {
+              "Type": "AWS::ApiGateway::Method",
+              "Properties": {
+                "HttpMethod": "DELETE",
+                "RequestParameters": {},
+                "ResourceId": {
+                  "Ref": "ApiGatewayResourceImagesImageidVar"
+                },
+                "RestApiId": {
+                  "Ref": "ApiGatewayRestApi"
+                },
+                "ApiKeyRequired": "<REDACTED>",
+                "AuthorizationType": "NONE",
+                "Integration": {
+                  "IntegrationHttpMethod": "POST",
+                  "Type": "AWS_PROXY",
+                  "Uri": {
+                    "Fn::Join": [
+                      "",
+                      [
+                        "arn:",
+                        {
+                          "Ref": "AWS::Partition"
+                        },
+                        ":apigateway:",
+                        {
+                          "Ref": "AWS::Region"
+                        },
+                        ":lambda:path/2015-03-31/functions/",
+                        {
+                          "Fn::GetAtt": [
+                            "DeleteImageLambdaFunction",
+                            "Arn"
+                          ]
+                        },
+                        "/invocations"
+                      ]
+                    ]
+                  }
+                },
+                "MethodResponses": []
+              },
+              "DependsOn": [
+                "DeleteImageLambdaPermissionApiGateway"
+              ]
+            },
+            "ApiGatewayDeployment1743052851863": {
+              "Type": "AWS::ApiGateway::Deployment",
+              "Properties": {
+                "RestApiId": {
+                  "Ref": "ApiGatewayRestApi"
+                },
+                "StageName": "dev"
+              },
+              "DependsOn": [
+                "ApiGatewayMethodUploadPost",
+                "ApiGatewayMethodImagesGet",
+                "ApiGatewayMethodImagesImageidVarGet",
+                "ApiGatewayMethodImagesImageidVarDelete"
+              ]
+            },
+            "UploadImageLambdaPermissionApiGateway": {
+              "Type": "AWS::Lambda::Permission",
+              "Properties": {
+                "FunctionName": {
+                  "Fn::GetAtt": [
+                    "UploadImageLambdaFunction",
+                    "Arn"
+                  ]
+                },
+                "Action": "lambda:InvokeFunction",
+                "Principal": "apigateway.amazonaws.com",
+                "SourceArn": {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "arn:",
+                      {
+                        "Ref": "AWS::Partition"
+                      },
+                      ":execute-api:",
+                      {
+                        "Ref": "AWS::Region"
+                      },
+                      ":",
+                      {
+                        "Ref": "AWS::AccountId"
+                      },
+                      ":",
+                      {
+                        "Ref": "ApiGatewayRestApi"
+                      },
+                      "/*/*"
+                    ]
+                  ]
+                }
+              }
+            },
+            "ListImagesLambdaPermissionApiGateway": {
+              "Type": "AWS::Lambda::Permission",
+              "Properties": {
+                "FunctionName": {
+                  "Fn::GetAtt": [
+                    "ListImagesLambdaFunction",
+                    "Arn"
+                  ]
+                },
+                "Action": "lambda:InvokeFunction",
+                "Principal": "apigateway.amazonaws.com",
+                "SourceArn": {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "arn:",
+                      {
+                        "Ref": "AWS::Partition"
+                      },
+                      ":execute-api:",
+                      {
+                        "Ref": "AWS::Region"
+                      },
+                      ":",
+                      {
+                        "Ref": "AWS::AccountId"
+                      },
+                      ":",
+                      {
+                        "Ref": "ApiGatewayRestApi"
+                      },
+                      "/*/*"
+                    ]
+                  ]
+                }
+              }
+            },
+            "ViewImageLambdaPermissionApiGateway": {
+              "Type": "AWS::Lambda::Permission",
+              "Properties": {
+                "FunctionName": {
+                  "Fn::GetAtt": [
+                    "ViewImageLambdaFunction",
+                    "Arn"
+                  ]
+                },
+                "Action": "lambda:InvokeFunction",
+                "Principal": "apigateway.amazonaws.com",
+                "SourceArn": {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "arn:",
+                      {
+                        "Ref": "AWS::Partition"
+                      },
+                      ":execute-api:",
+                      {
+                        "Ref": "AWS::Region"
+                      },
+                      ":",
+                      {
+                        "Ref": "AWS::AccountId"
+                      },
+                      ":",
+                      {
+                        "Ref": "ApiGatewayRestApi"
+                      },
+                      "/*/*"
+                    ]
+                  ]
+                }
+              }
+            },
+            "DeleteImageLambdaPermissionApiGateway": {
+              "Type": "AWS::Lambda::Permission",
+              "Properties": {
+                "FunctionName": {
+                  "Fn::GetAtt": [
+                    "DeleteImageLambdaFunction",
+                    "Arn"
+                  ]
+                },
+                "Action": "lambda:InvokeFunction",
+                "Principal": "apigateway.amazonaws.com",
+                "SourceArn": {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "arn:",
+                      {
+                        "Ref": "AWS::Partition"
+                      },
+                      ":execute-api:",
+                      {
+                        "Ref": "AWS::Region"
+                      },
+                      ":",
+                      {
+                        "Ref": "AWS::AccountId"
+                      },
+                      ":",
+                      {
+                        "Ref": "ApiGatewayRestApi"
+                      },
+                      "/*/*"
+                    ]
+                  ]
+                }
+              }
+            },
+            "ImagesBucket": {
+              "Type": "AWS::S3::Bucket",
+              "Properties": {
+                "BucketName": "mc-image-insta-uploaders"
+              }
+            },
+            "ImagesTable": {
+              "Type": "AWS::DynamoDB::Table",
+              "Properties": {
+                "TableName": "ImagesMetadata",
+                "AttributeDefinitions": [
+                  {
+                    "AttributeName": "ImageID",
+                    "AttributeType": "S"
+                  }
+                ],
+                "KeySchema": [
+                  {
+                    "AttributeName": "ImageID",
+                    "KeyType": "HASH"
+                  }
+                ],
+                "ProvisionedThroughput": {
+                  "ReadCapacityUnits": 5,
+                  "WriteCapacityUnits": 5
+                }
+              }
+            }
+          },
+          "Outputs": {
+            "ServerlessDeploymentBucketName": {
+              "Value": "serverless-framework-deployments-us-east-1-a1ba091e-5054",
+              "Export": {
+                "Name": "sls-image-upload-service-dev-ServerlessDeploymentBucketName"
+              }
+            },
+            "UploadImageLambdaFunctionQualifiedArn": {
+              "Description": "Current Lambda function version",
+              "Value": {
+                "Ref": "UploadImageLambdaVersionW4NLgSUTGyX2SmNRgQaiva8Hf2vgRpu8EIALHbIZUkI"
+              },
+              "Export": {
+                "Name": "sls-image-upload-service-dev-UploadImageLambdaFunctionQualifiedArn"
+              }
+            },
+            "ListImagesLambdaFunctionQualifiedArn": {
+              "Description": "Current Lambda function version",
+              "Value": {
+                "Ref": "ListImagesLambdaVersionhZuPUN05puc2wXVtixnuKNT16cUIYJ301urnBWWrOTY"
+              },
+              "Export": {
+                "Name": "sls-image-upload-service-dev-ListImagesLambdaFunctionQualifiedArn"
+              }
+            },
+            "ViewImageLambdaFunctionQualifiedArn": {
+              "Description": "Current Lambda function version",
+              "Value": {
+                "Ref": "ViewImageLambdaVersional4AN5MBO40cZajM5NaDkaczZh3YXVJlHRZ7i3ezJ6g"
+              },
+              "Export": {
+                "Name": "sls-image-upload-service-dev-ViewImageLambdaFunctionQualifiedArn"
+              }
+            },
+            "DeleteImageLambdaFunctionQualifiedArn": {
+              "Description": "Current Lambda function version",
+              "Value": {
+                "Ref": "DeleteImageLambdaVersionuRG2aN2l7vgpRuCNun1qzCZTQ0a2X62DN50njI5d3Os"
+              },
+              "Export": {
+                "Name": "sls-image-upload-service-dev-DeleteImageLambdaFunctionQualifiedArn"
+              }
+            },
+            "ServiceEndpoint": {
+              "Description": "URL of the service endpoint",
+              "Value": {
+                "Fn::Join": [
+                  "",
+                  [
+                    "https://",
+                    {
+                      "Ref": "ApiGatewayRestApi"
+                    },
+                    ".execute-api.",
+                    {
+                      "Ref": "AWS::Region"
+                    },
+                    ".",
+                    {
+                      "Ref": "AWS::URLSuffix"
+                    },
+                    "/dev"
+                  ]
+                ]
+              },
+              "Export": {
+                "Name": "sls-image-upload-service-dev-ServiceEndpoint"
+              }
+            }
+          }
+        },
+        "vpc": {}
       },
       "functions": {
         "uploadImage": {
@@ -44,11 +806,18 @@
             {
               "http": {
                 "path": "upload",
-                "method": "post"
+                "method": "post",
+                "integration": "AWS_PROXY"
               }
             }
           ],
-          "name": "image-upload-service-dev-uploadImage"
+          "name": "image-upload-service-dev-uploadImage",
+          "package": {},
+          "memory": 1024,
+          "timeout": 6,
+          "runtime": "python3.9",
+          "vpc": {},
+          "versionLogicalId": "UploadImageLambdaVersionW4NLgSUTGyX2SmNRgQaiva8Hf2vgRpu8EIALHbIZUkI"
         },
         "listImages": {
           "handler": "src.list_images.list_images",
@@ -56,11 +825,18 @@
             {
               "http": {
                 "path": "images",
-                "method": "get"
+                "method": "get",
+                "integration": "AWS_PROXY"
               }
             }
           ],
-          "name": "image-upload-service-dev-listImages"
+          "name": "image-upload-service-dev-listImages",
+          "package": {},
+          "memory": 1024,
+          "timeout": 6,
+          "runtime": "python3.9",
+          "vpc": {},
+          "versionLogicalId": "ListImagesLambdaVersionhZuPUN05puc2wXVtixnuKNT16cUIYJ301urnBWWrOTY"
         },
         "viewImage": {
           "handler": "src.view_image.view_image",
@@ -68,11 +844,18 @@
             {
               "http": {
                 "path": "images/{image_id}",
-                "method": "get"
+                "method": "get",
+                "integration": "AWS_PROXY"
               }
             }
           ],
-          "name": "image-upload-service-dev-viewImage"
+          "name": "image-upload-service-dev-viewImage",
+          "package": {},
+          "memory": 1024,
+          "timeout": 6,
+          "runtime": "python3.9",
+          "vpc": {},
+          "versionLogicalId": "ViewImageLambdaVersional4AN5MBO40cZajM5NaDkaczZh3YXVJlHRZ7i3ezJ6g"
         },
         "deleteImage": {
           "handler": "src.delete_image.delete_image",
@@ -80,11 +863,18 @@
             {
               "http": {
                 "path": "images/{image_id}",
-                "method": "delete"
+                "method": "delete",
+                "integration": "AWS_PROXY"
               }
             }
           ],
-          "name": "image-upload-service-dev-deleteImage"
+          "name": "image-upload-service-dev-deleteImage",
+          "package": {},
+          "memory": 1024,
+          "timeout": 6,
+          "runtime": "python3.9",
+          "vpc": {},
+          "versionLogicalId": "DeleteImageLambdaVersionuRG2aN2l7vgpRuCNun1qzCZTQ0a2X62DN50njI5d3Os"
         }
       },
       "resources": {
@@ -92,7 +882,7 @@
           "ImagesBucket": {
             "Type": "AWS::S3::Bucket",
             "Properties": {
-              "BucketName": "mc-image-insta-uploader"
+              "BucketName": "mc-image-insta-uploaders"
             }
           },
           "ImagesTable": {
@@ -117,20 +907,803 @@
               }
             }
           }
-        }
+        },
+        "Outputs": {}
       }
     },
     "provider": {
       "name": "aws",
-      "runtime": "python3.7",
+      "runtime": "python3.9",
       "stage": "dev",
       "region": "us-east-1",
-      "environment": {
-        "AWS_ACCESS_KEY_ID": "<REDACTED>",
-        "AWS_SECRET_ACCESS_KEY": "<REDACTED>",
-        "AWS_DEFAULT_REGION": "us-east-1"
+      "iamRoleStatements": [
+        {
+          "Effect": "Allow",
+          "Action": [
+            "s3:PutObject",
+            "s3:GetObject",
+            "s3:DeleteObject"
+          ],
+          "Resource": [
+            "arn:aws:s3:::mc-image-insta-uploaders/images/*",
+            "arn:aws:s3:::mc-image-insta-uploaders/*"
+          ]
+        },
+        {
+          "Effect": "Allow",
+          "Action": [
+            "dynamodb:PutItem",
+            "dynamodb:GetItem",
+            "dynamodb:Scan",
+            "dynamodb:DeleteItem"
+          ],
+          "Resource": "arn:aws:dynamodb:us-east-1:061039779923:table/ImagesMetadata"
+        }
+      ],
+      "versionFunctions": true,
+      "environment": null,
+      "compiledCloudFormationTemplate": {
+        "AWSTemplateFormatVersion": "2010-09-09",
+        "Description": "The AWS CloudFormation template for this Serverless application",
+        "Resources": {
+          "UploadImageLogGroup": {
+            "Type": "AWS::Logs::LogGroup",
+            "Properties": {
+              "LogGroupName": "/aws/lambda/image-upload-service-dev-uploadImage"
+            }
+          },
+          "ListImagesLogGroup": {
+            "Type": "AWS::Logs::LogGroup",
+            "Properties": {
+              "LogGroupName": "/aws/lambda/image-upload-service-dev-listImages"
+            }
+          },
+          "ViewImageLogGroup": {
+            "Type": "AWS::Logs::LogGroup",
+            "Properties": {
+              "LogGroupName": "/aws/lambda/image-upload-service-dev-viewImage"
+            }
+          },
+          "DeleteImageLogGroup": {
+            "Type": "AWS::Logs::LogGroup",
+            "Properties": {
+              "LogGroupName": "/aws/lambda/image-upload-service-dev-deleteImage"
+            }
+          },
+          "IamRoleLambdaExecution": {
+            "Type": "AWS::IAM::Role",
+            "Properties": {
+              "AssumeRolePolicyDocument": {
+                "Version": "2012-10-17",
+                "Statement": [
+                  {
+                    "Effect": "Allow",
+                    "Principal": {
+                      "Service": [
+                        "lambda.amazonaws.com"
+                      ]
+                    },
+                    "Action": [
+                      "sts:AssumeRole"
+                    ]
+                  }
+                ]
+              },
+              "Policies": [
+                {
+                  "PolicyName": {
+                    "Fn::Join": [
+                      "-",
+                      [
+                        "image-upload-service",
+                        "dev",
+                        "lambda"
+                      ]
+                    ]
+                  },
+                  "PolicyDocument": {
+                    "Version": "2012-10-17",
+                    "Statement": [
+                      {
+                        "Effect": "Allow",
+                        "Action": [
+                          "logs:CreateLogStream",
+                          "logs:CreateLogGroup",
+                          "logs:TagResource"
+                        ],
+                        "Resource": [
+                          {
+                            "Fn::Sub": "arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/image-upload-service-dev*:*"
+                          }
+                        ]
+                      },
+                      {
+                        "Effect": "Allow",
+                        "Action": [
+                          "logs:PutLogEvents"
+                        ],
+                        "Resource": [
+                          {
+                            "Fn::Sub": "arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/image-upload-service-dev*:*:*"
+                          }
+                        ]
+                      },
+                      {
+                        "Effect": "Allow",
+                        "Action": [
+                          "s3:PutObject",
+                          "s3:GetObject",
+                          "s3:DeleteObject"
+                        ],
+                        "Resource": [
+                          "arn:aws:s3:::mc-image-insta-uploaders/images/*",
+                          "arn:aws:s3:::mc-image-insta-uploaders/*"
+                        ]
+                      },
+                      {
+                        "Effect": "Allow",
+                        "Action": [
+                          "dynamodb:PutItem",
+                          "dynamodb:GetItem",
+                          "dynamodb:Scan",
+                          "dynamodb:DeleteItem"
+                        ],
+                        "Resource": "arn:aws:dynamodb:us-east-1:061039779923:table/ImagesMetadata"
+                      }
+                    ]
+                  }
+                }
+              ],
+              "Path": "/",
+              "RoleName": {
+                "Fn::Join": [
+                  "-",
+                  [
+                    "image-upload-service",
+                    "dev",
+                    {
+                      "Ref": "AWS::Region"
+                    },
+                    "lambdaRole"
+                  ]
+                ]
+              }
+            }
+          },
+          "UploadImageLambdaFunction": {
+            "Type": "AWS::Lambda::Function",
+            "Properties": {
+              "Code": {
+                "S3Bucket": "serverless-framework-deployments-us-east-1-a1ba091e-5054",
+                "S3Key": "serverless/image-upload-service/dev/1743052861339-2025-03-27T05:21:01.339Z/image-upload-service.zip"
+              },
+              "Handler": "src.upload_image.upload_image",
+              "Runtime": "python3.9",
+              "FunctionName": "image-upload-service-dev-uploadImage",
+              "MemorySize": 1024,
+              "Timeout": 6,
+              "Role": {
+                "Fn::GetAtt": [
+                  "IamRoleLambdaExecution",
+                  "Arn"
+                ]
+              }
+            },
+            "DependsOn": [
+              "UploadImageLogGroup"
+            ]
+          },
+          "ListImagesLambdaFunction": {
+            "Type": "AWS::Lambda::Function",
+            "Properties": {
+              "Code": {
+                "S3Bucket": "serverless-framework-deployments-us-east-1-a1ba091e-5054",
+                "S3Key": "serverless/image-upload-service/dev/1743052861339-2025-03-27T05:21:01.339Z/image-upload-service.zip"
+              },
+              "Handler": "src.list_images.list_images",
+              "Runtime": "python3.9",
+              "FunctionName": "image-upload-service-dev-listImages",
+              "MemorySize": 1024,
+              "Timeout": 6,
+              "Role": {
+                "Fn::GetAtt": [
+                  "IamRoleLambdaExecution",
+                  "Arn"
+                ]
+              }
+            },
+            "DependsOn": [
+              "ListImagesLogGroup"
+            ]
+          },
+          "ViewImageLambdaFunction": {
+            "Type": "AWS::Lambda::Function",
+            "Properties": {
+              "Code": {
+                "S3Bucket": "serverless-framework-deployments-us-east-1-a1ba091e-5054",
+                "S3Key": "serverless/image-upload-service/dev/1743052861339-2025-03-27T05:21:01.339Z/image-upload-service.zip"
+              },
+              "Handler": "src.view_image.view_image",
+              "Runtime": "python3.9",
+              "FunctionName": "image-upload-service-dev-viewImage",
+              "MemorySize": 1024,
+              "Timeout": 6,
+              "Role": {
+                "Fn::GetAtt": [
+                  "IamRoleLambdaExecution",
+                  "Arn"
+                ]
+              }
+            },
+            "DependsOn": [
+              "ViewImageLogGroup"
+            ]
+          },
+          "DeleteImageLambdaFunction": {
+            "Type": "AWS::Lambda::Function",
+            "Properties": {
+              "Code": {
+                "S3Bucket": "serverless-framework-deployments-us-east-1-a1ba091e-5054",
+                "S3Key": "serverless/image-upload-service/dev/1743052861339-2025-03-27T05:21:01.339Z/image-upload-service.zip"
+              },
+              "Handler": "src.delete_image.delete_image",
+              "Runtime": "python3.9",
+              "FunctionName": "image-upload-service-dev-deleteImage",
+              "MemorySize": 1024,
+              "Timeout": 6,
+              "Role": {
+                "Fn::GetAtt": [
+                  "IamRoleLambdaExecution",
+                  "Arn"
+                ]
+              }
+            },
+            "DependsOn": [
+              "DeleteImageLogGroup"
+            ]
+          },
+          "UploadImageLambdaVersionW4NLgSUTGyX2SmNRgQaiva8Hf2vgRpu8EIALHbIZUkI": {
+            "Type": "AWS::Lambda::Version",
+            "DeletionPolicy": "Retain",
+            "Properties": {
+              "FunctionName": {
+                "Ref": "UploadImageLambdaFunction"
+              },
+              "CodeSha256": "DG1QZ/ns+iI9JWJoit5z5nWstoaURYQc17Wz49wIgYg="
+            }
+          },
+          "ListImagesLambdaVersionhZuPUN05puc2wXVtixnuKNT16cUIYJ301urnBWWrOTY": {
+            "Type": "AWS::Lambda::Version",
+            "DeletionPolicy": "Retain",
+            "Properties": {
+              "FunctionName": {
+                "Ref": "ListImagesLambdaFunction"
+              },
+              "CodeSha256": "DG1QZ/ns+iI9JWJoit5z5nWstoaURYQc17Wz49wIgYg="
+            }
+          },
+          "ViewImageLambdaVersional4AN5MBO40cZajM5NaDkaczZh3YXVJlHRZ7i3ezJ6g": {
+            "Type": "AWS::Lambda::Version",
+            "DeletionPolicy": "Retain",
+            "Properties": {
+              "FunctionName": {
+                "Ref": "ViewImageLambdaFunction"
+              },
+              "CodeSha256": "DG1QZ/ns+iI9JWJoit5z5nWstoaURYQc17Wz49wIgYg="
+            }
+          },
+          "DeleteImageLambdaVersionuRG2aN2l7vgpRuCNun1qzCZTQ0a2X62DN50njI5d3Os": {
+            "Type": "AWS::Lambda::Version",
+            "DeletionPolicy": "Retain",
+            "Properties": {
+              "FunctionName": {
+                "Ref": "DeleteImageLambdaFunction"
+              },
+              "CodeSha256": "DG1QZ/ns+iI9JWJoit5z5nWstoaURYQc17Wz49wIgYg="
+            }
+          },
+          "ApiGatewayRestApi": {
+            "Type": "AWS::ApiGateway::RestApi",
+            "Properties": {
+              "Name": "dev-image-upload-service",
+              "EndpointConfiguration": {
+                "Types": [
+                  "EDGE"
+                ]
+              },
+              "Policy": ""
+            }
+          },
+          "ApiGatewayResourceUpload": {
+            "Type": "AWS::ApiGateway::Resource",
+            "Properties": {
+              "ParentId": {
+                "Fn::GetAtt": [
+                  "ApiGatewayRestApi",
+                  "RootResourceId"
+                ]
+              },
+              "PathPart": "upload",
+              "RestApiId": {
+                "Ref": "ApiGatewayRestApi"
+              }
+            }
+          },
+          "ApiGatewayResourceImages": {
+            "Type": "AWS::ApiGateway::Resource",
+            "Properties": {
+              "ParentId": {
+                "Fn::GetAtt": [
+                  "ApiGatewayRestApi",
+                  "RootResourceId"
+                ]
+              },
+              "PathPart": "images",
+              "RestApiId": {
+                "Ref": "ApiGatewayRestApi"
+              }
+            }
+          },
+          "ApiGatewayResourceImagesImageidVar": {
+            "Type": "AWS::ApiGateway::Resource",
+            "Properties": {
+              "ParentId": {
+                "Ref": "ApiGatewayResourceImages"
+              },
+              "PathPart": "{image_id}",
+              "RestApiId": {
+                "Ref": "ApiGatewayRestApi"
+              }
+            }
+          },
+          "ApiGatewayMethodUploadPost": {
+            "Type": "AWS::ApiGateway::Method",
+            "Properties": {
+              "HttpMethod": "POST",
+              "RequestParameters": {},
+              "ResourceId": {
+                "Ref": "ApiGatewayResourceUpload"
+              },
+              "RestApiId": {
+                "Ref": "ApiGatewayRestApi"
+              },
+              "ApiKeyRequired": "<REDACTED>",
+              "AuthorizationType": "NONE",
+              "Integration": {
+                "IntegrationHttpMethod": "POST",
+                "Type": "AWS_PROXY",
+                "Uri": {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "arn:",
+                      {
+                        "Ref": "AWS::Partition"
+                      },
+                      ":apigateway:",
+                      {
+                        "Ref": "AWS::Region"
+                      },
+                      ":lambda:path/2015-03-31/functions/",
+                      {
+                        "Fn::GetAtt": [
+                          "UploadImageLambdaFunction",
+                          "Arn"
+                        ]
+                      },
+                      "/invocations"
+                    ]
+                  ]
+                }
+              },
+              "MethodResponses": []
+            },
+            "DependsOn": [
+              "UploadImageLambdaPermissionApiGateway"
+            ]
+          },
+          "ApiGatewayMethodImagesGet": {
+            "Type": "AWS::ApiGateway::Method",
+            "Properties": {
+              "HttpMethod": "GET",
+              "RequestParameters": {},
+              "ResourceId": {
+                "Ref": "ApiGatewayResourceImages"
+              },
+              "RestApiId": {
+                "Ref": "ApiGatewayRestApi"
+              },
+              "ApiKeyRequired": "<REDACTED>",
+              "AuthorizationType": "NONE",
+              "Integration": {
+                "IntegrationHttpMethod": "POST",
+                "Type": "AWS_PROXY",
+                "Uri": {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "arn:",
+                      {
+                        "Ref": "AWS::Partition"
+                      },
+                      ":apigateway:",
+                      {
+                        "Ref": "AWS::Region"
+                      },
+                      ":lambda:path/2015-03-31/functions/",
+                      {
+                        "Fn::GetAtt": [
+                          "ListImagesLambdaFunction",
+                          "Arn"
+                        ]
+                      },
+                      "/invocations"
+                    ]
+                  ]
+                }
+              },
+              "MethodResponses": []
+            },
+            "DependsOn": [
+              "ListImagesLambdaPermissionApiGateway"
+            ]
+          },
+          "ApiGatewayMethodImagesImageidVarGet": {
+            "Type": "AWS::ApiGateway::Method",
+            "Properties": {
+              "HttpMethod": "GET",
+              "RequestParameters": {},
+              "ResourceId": {
+                "Ref": "ApiGatewayResourceImagesImageidVar"
+              },
+              "RestApiId": {
+                "Ref": "ApiGatewayRestApi"
+              },
+              "ApiKeyRequired": "<REDACTED>",
+              "AuthorizationType": "NONE",
+              "Integration": {
+                "IntegrationHttpMethod": "POST",
+                "Type": "AWS_PROXY",
+                "Uri": {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "arn:",
+                      {
+                        "Ref": "AWS::Partition"
+                      },
+                      ":apigateway:",
+                      {
+                        "Ref": "AWS::Region"
+                      },
+                      ":lambda:path/2015-03-31/functions/",
+                      {
+                        "Fn::GetAtt": [
+                          "ViewImageLambdaFunction",
+                          "Arn"
+                        ]
+                      },
+                      "/invocations"
+                    ]
+                  ]
+                }
+              },
+              "MethodResponses": []
+            },
+            "DependsOn": [
+              "ViewImageLambdaPermissionApiGateway"
+            ]
+          },
+          "ApiGatewayMethodImagesImageidVarDelete": {
+            "Type": "AWS::ApiGateway::Method",
+            "Properties": {
+              "HttpMethod": "DELETE",
+              "RequestParameters": {},
+              "ResourceId": {
+                "Ref": "ApiGatewayResourceImagesImageidVar"
+              },
+              "RestApiId": {
+                "Ref": "ApiGatewayRestApi"
+              },
+              "ApiKeyRequired": "<REDACTED>",
+              "AuthorizationType": "NONE",
+              "Integration": {
+                "IntegrationHttpMethod": "POST",
+                "Type": "AWS_PROXY",
+                "Uri": {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "arn:",
+                      {
+                        "Ref": "AWS::Partition"
+                      },
+                      ":apigateway:",
+                      {
+                        "Ref": "AWS::Region"
+                      },
+                      ":lambda:path/2015-03-31/functions/",
+                      {
+                        "Fn::GetAtt": [
+                          "DeleteImageLambdaFunction",
+                          "Arn"
+                        ]
+                      },
+                      "/invocations"
+                    ]
+                  ]
+                }
+              },
+              "MethodResponses": []
+            },
+            "DependsOn": [
+              "DeleteImageLambdaPermissionApiGateway"
+            ]
+          },
+          "ApiGatewayDeployment1743052851863": {
+            "Type": "AWS::ApiGateway::Deployment",
+            "Properties": {
+              "RestApiId": {
+                "Ref": "ApiGatewayRestApi"
+              },
+              "StageName": "dev"
+            },
+            "DependsOn": [
+              "ApiGatewayMethodUploadPost",
+              "ApiGatewayMethodImagesGet",
+              "ApiGatewayMethodImagesImageidVarGet",
+              "ApiGatewayMethodImagesImageidVarDelete"
+            ]
+          },
+          "UploadImageLambdaPermissionApiGateway": {
+            "Type": "AWS::Lambda::Permission",
+            "Properties": {
+              "FunctionName": {
+                "Fn::GetAtt": [
+                  "UploadImageLambdaFunction",
+                  "Arn"
+                ]
+              },
+              "Action": "lambda:InvokeFunction",
+              "Principal": "apigateway.amazonaws.com",
+              "SourceArn": {
+                "Fn::Join": [
+                  "",
+                  [
+                    "arn:",
+                    {
+                      "Ref": "AWS::Partition"
+                    },
+                    ":execute-api:",
+                    {
+                      "Ref": "AWS::Region"
+                    },
+                    ":",
+                    {
+                      "Ref": "AWS::AccountId"
+                    },
+                    ":",
+                    {
+                      "Ref": "ApiGatewayRestApi"
+                    },
+                    "/*/*"
+                  ]
+                ]
+              }
+            }
+          },
+          "ListImagesLambdaPermissionApiGateway": {
+            "Type": "AWS::Lambda::Permission",
+            "Properties": {
+              "FunctionName": {
+                "Fn::GetAtt": [
+                  "ListImagesLambdaFunction",
+                  "Arn"
+                ]
+              },
+              "Action": "lambda:InvokeFunction",
+              "Principal": "apigateway.amazonaws.com",
+              "SourceArn": {
+                "Fn::Join": [
+                  "",
+                  [
+                    "arn:",
+                    {
+                      "Ref": "AWS::Partition"
+                    },
+                    ":execute-api:",
+                    {
+                      "Ref": "AWS::Region"
+                    },
+                    ":",
+                    {
+                      "Ref": "AWS::AccountId"
+                    },
+                    ":",
+                    {
+                      "Ref": "ApiGatewayRestApi"
+                    },
+                    "/*/*"
+                  ]
+                ]
+              }
+            }
+          },
+          "ViewImageLambdaPermissionApiGateway": {
+            "Type": "AWS::Lambda::Permission",
+            "Properties": {
+              "FunctionName": {
+                "Fn::GetAtt": [
+                  "ViewImageLambdaFunction",
+                  "Arn"
+                ]
+              },
+              "Action": "lambda:InvokeFunction",
+              "Principal": "apigateway.amazonaws.com",
+              "SourceArn": {
+                "Fn::Join": [
+                  "",
+                  [
+                    "arn:",
+                    {
+                      "Ref": "AWS::Partition"
+                    },
+                    ":execute-api:",
+                    {
+                      "Ref": "AWS::Region"
+                    },
+                    ":",
+                    {
+                      "Ref": "AWS::AccountId"
+                    },
+                    ":",
+                    {
+                      "Ref": "ApiGatewayRestApi"
+                    },
+                    "/*/*"
+                  ]
+                ]
+              }
+            }
+          },
+          "DeleteImageLambdaPermissionApiGateway": {
+            "Type": "AWS::Lambda::Permission",
+            "Properties": {
+              "FunctionName": {
+                "Fn::GetAtt": [
+                  "DeleteImageLambdaFunction",
+                  "Arn"
+                ]
+              },
+              "Action": "lambda:InvokeFunction",
+              "Principal": "apigateway.amazonaws.com",
+              "SourceArn": {
+                "Fn::Join": [
+                  "",
+                  [
+                    "arn:",
+                    {
+                      "Ref": "AWS::Partition"
+                    },
+                    ":execute-api:",
+                    {
+                      "Ref": "AWS::Region"
+                    },
+                    ":",
+                    {
+                      "Ref": "AWS::AccountId"
+                    },
+                    ":",
+                    {
+                      "Ref": "ApiGatewayRestApi"
+                    },
+                    "/*/*"
+                  ]
+                ]
+              }
+            }
+          },
+          "ImagesBucket": {
+            "Type": "AWS::S3::Bucket",
+            "Properties": {
+              "BucketName": "mc-image-insta-uploaders"
+            }
+          },
+          "ImagesTable": {
+            "Type": "AWS::DynamoDB::Table",
+            "Properties": {
+              "TableName": "ImagesMetadata",
+              "AttributeDefinitions": [
+                {
+                  "AttributeName": "ImageID",
+                  "AttributeType": "S"
+                }
+              ],
+              "KeySchema": [
+                {
+                  "AttributeName": "ImageID",
+                  "KeyType": "HASH"
+                }
+              ],
+              "ProvisionedThroughput": {
+                "ReadCapacityUnits": 5,
+                "WriteCapacityUnits": 5
+              }
+            }
+          }
+        },
+        "Outputs": {
+          "ServerlessDeploymentBucketName": {
+            "Value": "serverless-framework-deployments-us-east-1-a1ba091e-5054",
+            "Export": {
+              "Name": "sls-image-upload-service-dev-ServerlessDeploymentBucketName"
+            }
+          },
+          "UploadImageLambdaFunctionQualifiedArn": {
+            "Description": "Current Lambda function version",
+            "Value": {
+              "Ref": "UploadImageLambdaVersionW4NLgSUTGyX2SmNRgQaiva8Hf2vgRpu8EIALHbIZUkI"
+            },
+            "Export": {
+              "Name": "sls-image-upload-service-dev-UploadImageLambdaFunctionQualifiedArn"
+            }
+          },
+          "ListImagesLambdaFunctionQualifiedArn": {
+            "Description": "Current Lambda function version",
+            "Value": {
+              "Ref": "ListImagesLambdaVersionhZuPUN05puc2wXVtixnuKNT16cUIYJ301urnBWWrOTY"
+            },
+            "Export": {
+              "Name": "sls-image-upload-service-dev-ListImagesLambdaFunctionQualifiedArn"
+            }
+          },
+          "ViewImageLambdaFunctionQualifiedArn": {
+            "Description": "Current Lambda function version",
+            "Value": {
+              "Ref": "ViewImageLambdaVersional4AN5MBO40cZajM5NaDkaczZh3YXVJlHRZ7i3ezJ6g"
+            },
+            "Export": {
+              "Name": "sls-image-upload-service-dev-ViewImageLambdaFunctionQualifiedArn"
+            }
+          },
+          "DeleteImageLambdaFunctionQualifiedArn": {
+            "Description": "Current Lambda function version",
+            "Value": {
+              "Ref": "DeleteImageLambdaVersionuRG2aN2l7vgpRuCNun1qzCZTQ0a2X62DN50njI5d3Os"
+            },
+            "Export": {
+              "Name": "sls-image-upload-service-dev-DeleteImageLambdaFunctionQualifiedArn"
+            }
+          },
+          "ServiceEndpoint": {
+            "Description": "URL of the service endpoint",
+            "Value": {
+              "Fn::Join": [
+                "",
+                [
+                  "https://",
+                  {
+                    "Ref": "ApiGatewayRestApi"
+                  },
+                  ".execute-api.",
+                  {
+                    "Ref": "AWS::Region"
+                  },
+                  ".",
+                  {
+                    "Ref": "AWS::URLSuffix"
+                  },
+                  "/dev"
+                ]
+              ]
+            },
+            "Export": {
+              "Name": "sls-image-upload-service-dev-ServiceEndpoint"
+            }
+          }
+        }
       },
-      "versionFunctions": true
+      "vpc": {}
     },
     "dashboard": {
       "isEnabledForService": false,
@@ -141,62 +1714,818 @@
       "serviceProvider": null,
       "instanceParameters": null
     },
-    "error": {
-      "message": "API for service 'ecr' not yet implemented or pro feature - please check https://docs.localstack.cloud/references/coverage/ for further information",
-      "stack": "ServerlessError2: API for service 'ecr' not yet implemented or pro feature - please check https://docs.localstack.cloud/references/coverage/ for further information\n    at file:///Users/aminali/.serverless/releases/4.9.0/package/dist/sf-core.js:587:36\n    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)\n    at async persistentRequest (file:///Users/aminali/.serverless/releases/4.9.0/package/dist/sf-core.js:586:1958)",
-      "code": "AWS_E_C_R_DESCRIBE_REPOSITORIES_INTERNAL_FAILURE"
-    },
-    "serviceRawFile": "service: image-upload-service\n\nprovider:\n  name: aws\n  runtime: python3.7\n  stage: dev\n  region: us-east-1\n  environment:\n    AWS_ACCESS_KEY_ID: test\n    AWS_SECRET_ACCESS_KEY: test\n    AWS_DEFAULT_REGION: us-east-1\n\nplugins:\n  - serverless-localstack\n\ncustom:\n  localstack:\n    stages:\n      - dev\n    endpoints:\n      s3: http://localhost:4566\n      dynamodb: http://localhost:4566\n      lambda: http://localhost:4566\n      apiGateway: http://localhost:4566\n    debug: true\n    lambda:\n      mountCode: true  # Optional: Allows Lambda code mounting for local testing\n\nfunctions:\n  uploadImage:\n    handler: src.upload_image.upload_image\n    events:\n      - http:\n          path: upload\n          method: post\n  listImages:\n    handler: src.list_images.list_images\n    events:\n      - http:\n          path: images\n          method: get\n  viewImage:\n    handler: src.view_image.view_image\n    events:\n      - http:\n          path: images/{image_id}\n          method: get\n  deleteImage:\n    handler: src.delete_image.delete_image\n    events:\n      - http:\n          path: images/{image_id}\n          method: delete\n\nresources:\n  Resources:\n    ImagesBucket:\n      Type: AWS::S3::Bucket\n      Properties:\n        BucketName: mc-image-insta-uploader\n    ImagesTable:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: ImagesMetadata\n        AttributeDefinitions:\n          - AttributeName: ImageID\n            AttributeType: S\n        KeySchema:\n          - AttributeName: ImageID\n            KeyType: HASH\n        ProvisionedThroughput:\n          ReadCapacityUnits: 5\n          WriteCapacityUnits: 5\n",
+    "serviceRawFile": "service: image-upload-service\n\nprovider:\n  name: aws\n  runtime: python3.9\n  stage: dev\n  region: us-east-1  # Region is set here, no need to add it in environment variables\n  environment:\n    # AWS credentials are managed by AWS CLI, no need to include them here\n    # AWS_DEFAULT_REGION removed\n  \n  iamRoleStatements:\n    - Effect: \"Allow\"\n      Action:\n        - \"s3:PutObject\"\n        - \"s3:GetObject\"\n        - \"s3:DeleteObject\"\n      Resource:\n        - \"arn:aws:s3:::mc-image-insta-uploaders/images/*\"\n        - \"arn:aws:s3:::mc-image-insta-uploaders/*\"  # In case you want to grant permission for all objects in the bucket\n    - Effect: \"Allow\"\n      Action:\n        - \"dynamodb:PutItem\"\n        - \"dynamodb:GetItem\"\n        - \"dynamodb:Scan\"\n        - \"dynamodb:DeleteItem\"\n      Resource:\n        - \"arn:aws:dynamodb:us-east-1:061039779923:table/ImagesMetadata\"  # Replace with your DynamoDB table ARN\n\n\nfunctions:\n  uploadImage:\n    handler: src.upload_image.upload_image\n    events:\n      - http:\n          path: upload\n          method: post\n  listImages:\n    handler: src.list_images.list_images\n    events:\n      - http:\n          path: images\n          method: get\n  viewImage:\n    handler: src.view_image.view_image\n    events:\n      - http:\n          path: images/{image_id}\n          method: get\n  deleteImage:\n    handler: src.delete_image.delete_image\n    events:\n      - http:\n          path: images/{image_id}\n          method: delete\n\nresources:\n  Resources:\n    ImagesBucket:\n      Type: AWS::S3::Bucket\n      Properties:\n        BucketName: mc-image-insta-uploaders\n    ImagesTable:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: ImagesMetadata\n        AttributeDefinitions:\n          - AttributeName: ImageID\n            AttributeType: S\n        KeySchema:\n          - AttributeName: ImageID\n            KeyType: HASH\n        ProvisionedThroughput:\n          ReadCapacityUnits: 5\n          WriteCapacityUnits: 5\n",
     "command": [
-      "remove"
+      "deploy"
     ],
     "options": {},
     "orgId": "459473cd-c7ec-4270-9ae2-d652ea249de7",
     "orgName": "justchange",
     "userId": "ZCRcKhKcrV1b7vGHng",
     "userName": "justchange",
-    "serviceProviderAwsAccountId": "000000000000",
+    "serviceProviderAwsAccountId": "061039779923",
     "serviceProviderAwsCfStackName": "image-upload-service-dev",
-    "serviceProviderAwsCfStackId": "arn:aws:cloudformation:us-east-1:000000000000:stack/image-upload-service-dev/426e52f9",
-    "serviceProviderAwsCfStackCreated": "2025-03-22T10:53:01.047Z",
-    "serviceProviderAwsCfStackUpdated": "2025-03-22T11:41:21.580Z",
+    "serviceProviderAwsCfStackId": "arn:aws:cloudformation:us-east-1:061039779923:stack/image-upload-service-dev/7d23e510-0ab8-11f0-b916-0affe60c8819",
+    "serviceProviderAwsCfStackCreated": "2025-03-27T03:06:33.955Z",
+    "serviceProviderAwsCfStackUpdated": "2025-03-27T05:13:00.250Z",
     "serviceProviderAwsCfStackStatus": "UPDATE_COMPLETE",
     "serviceProviderAwsCfStackOutputs": [
       {
-        "OutputKey": "ServerlessDeploymentBucketName",
-        "OutputValue": "serverless-framework-deployments-us-east-1-2b844afd-8474",
-        "ExportName": "sls-image-upload-service-dev-ServerlessDeploymentBucketName"
+        "OutputKey": "DeleteImageLambdaFunctionQualifiedArn",
+        "OutputValue": "arn:aws:lambda:us-east-1:061039779923:function:image-upload-service-dev-deleteImage:20",
+        "Description": "Current Lambda function version",
+        "ExportName": "sls-image-upload-service-dev-DeleteImageLambdaFunctionQualifiedArn"
       },
       {
         "OutputKey": "UploadImageLambdaFunctionQualifiedArn",
-        "OutputValue": "arn:aws:lambda:us-east-1:000000000000:function:image-upload-service-dev-uploadImage:1",
+        "OutputValue": "arn:aws:lambda:us-east-1:061039779923:function:image-upload-service-dev-uploadImage:20",
         "Description": "Current Lambda function version",
         "ExportName": "sls-image-upload-service-dev-UploadImageLambdaFunctionQualifiedArn"
       },
       {
         "OutputKey": "ListImagesLambdaFunctionQualifiedArn",
-        "OutputValue": "arn:aws:lambda:us-east-1:000000000000:function:image-upload-service-dev-listImages:1",
+        "OutputValue": "arn:aws:lambda:us-east-1:061039779923:function:image-upload-service-dev-listImages:20",
         "Description": "Current Lambda function version",
         "ExportName": "sls-image-upload-service-dev-ListImagesLambdaFunctionQualifiedArn"
       },
       {
         "OutputKey": "ViewImageLambdaFunctionQualifiedArn",
-        "OutputValue": "arn:aws:lambda:us-east-1:000000000000:function:image-upload-service-dev-viewImage:1",
+        "OutputValue": "arn:aws:lambda:us-east-1:061039779923:function:image-upload-service-dev-viewImage:20",
         "Description": "Current Lambda function version",
         "ExportName": "sls-image-upload-service-dev-ViewImageLambdaFunctionQualifiedArn"
       },
       {
-        "OutputKey": "DeleteImageLambdaFunctionQualifiedArn",
-        "OutputValue": "arn:aws:lambda:us-east-1:000000000000:function:image-upload-service-dev-deleteImage:1",
-        "Description": "Current Lambda function version",
-        "ExportName": "sls-image-upload-service-dev-DeleteImageLambdaFunctionQualifiedArn"
-      },
-      {
         "OutputKey": "ServiceEndpoint",
-        "OutputValue": "https://0gzs7dkvga.execute-api.localhost.localstack.cloud:4566/dev",
+        "OutputValue": "https://h2y9d8bvc1.execute-api.us-east-1.amazonaws.com/dev",
         "Description": "URL of the service endpoint",
         "ExportName": "sls-image-upload-service-dev-ServiceEndpoint"
+      },
+      {
+        "OutputKey": "ServerlessDeploymentBucketName",
+        "OutputValue": "serverless-framework-deployments-us-east-1-a1ba091e-5054",
+        "ExportName": "sls-image-upload-service-dev-ServerlessDeploymentBucketName"
       }
-    ]
+    ],
+    "compiledCloudFormationTemplate": {
+      "AWSTemplateFormatVersion": "2010-09-09",
+      "Description": "The AWS CloudFormation template for this Serverless application",
+      "Resources": {
+        "UploadImageLogGroup": {
+          "Type": "AWS::Logs::LogGroup",
+          "Properties": {
+            "LogGroupName": "/aws/lambda/image-upload-service-dev-uploadImage"
+          }
+        },
+        "ListImagesLogGroup": {
+          "Type": "AWS::Logs::LogGroup",
+          "Properties": {
+            "LogGroupName": "/aws/lambda/image-upload-service-dev-listImages"
+          }
+        },
+        "ViewImageLogGroup": {
+          "Type": "AWS::Logs::LogGroup",
+          "Properties": {
+            "LogGroupName": "/aws/lambda/image-upload-service-dev-viewImage"
+          }
+        },
+        "DeleteImageLogGroup": {
+          "Type": "AWS::Logs::LogGroup",
+          "Properties": {
+            "LogGroupName": "/aws/lambda/image-upload-service-dev-deleteImage"
+          }
+        },
+        "IamRoleLambdaExecution": {
+          "Type": "AWS::IAM::Role",
+          "Properties": {
+            "AssumeRolePolicyDocument": {
+              "Version": "2012-10-17",
+              "Statement": [
+                {
+                  "Effect": "Allow",
+                  "Principal": {
+                    "Service": [
+                      "lambda.amazonaws.com"
+                    ]
+                  },
+                  "Action": [
+                    "sts:AssumeRole"
+                  ]
+                }
+              ]
+            },
+            "Policies": [
+              {
+                "PolicyName": {
+                  "Fn::Join": [
+                    "-",
+                    [
+                      "image-upload-service",
+                      "dev",
+                      "lambda"
+                    ]
+                  ]
+                },
+                "PolicyDocument": {
+                  "Version": "2012-10-17",
+                  "Statement": [
+                    {
+                      "Effect": "Allow",
+                      "Action": [
+                        "logs:CreateLogStream",
+                        "logs:CreateLogGroup",
+                        "logs:TagResource"
+                      ],
+                      "Resource": [
+                        {
+                          "Fn::Sub": "arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/image-upload-service-dev*:*"
+                        }
+                      ]
+                    },
+                    {
+                      "Effect": "Allow",
+                      "Action": [
+                        "logs:PutLogEvents"
+                      ],
+                      "Resource": [
+                        {
+                          "Fn::Sub": "arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/image-upload-service-dev*:*:*"
+                        }
+                      ]
+                    },
+                    {
+                      "Effect": "Allow",
+                      "Action": [
+                        "s3:PutObject",
+                        "s3:GetObject",
+                        "s3:DeleteObject"
+                      ],
+                      "Resource": [
+                        "arn:aws:s3:::mc-image-insta-uploaders/images/*",
+                        "arn:aws:s3:::mc-image-insta-uploaders/*"
+                      ]
+                    },
+                    {
+                      "Effect": "Allow",
+                      "Action": [
+                        "dynamodb:PutItem",
+                        "dynamodb:GetItem",
+                        "dynamodb:Scan",
+                        "dynamodb:DeleteItem"
+                      ],
+                      "Resource": "arn:aws:dynamodb:us-east-1:061039779923:table/ImagesMetadata"
+                    }
+                  ]
+                }
+              }
+            ],
+            "Path": "/",
+            "RoleName": {
+              "Fn::Join": [
+                "-",
+                [
+                  "image-upload-service",
+                  "dev",
+                  {
+                    "Ref": "AWS::Region"
+                  },
+                  "lambdaRole"
+                ]
+              ]
+            }
+          }
+        },
+        "UploadImageLambdaFunction": {
+          "Type": "AWS::Lambda::Function",
+          "Properties": {
+            "Code": {
+              "S3Bucket": "serverless-framework-deployments-us-east-1-a1ba091e-5054",
+              "S3Key": "serverless/image-upload-service/dev/1743052861339-2025-03-27T05:21:01.339Z/image-upload-service.zip"
+            },
+            "Handler": "src.upload_image.upload_image",
+            "Runtime": "python3.9",
+            "FunctionName": "image-upload-service-dev-uploadImage",
+            "MemorySize": 1024,
+            "Timeout": 6,
+            "Role": {
+              "Fn::GetAtt": [
+                "IamRoleLambdaExecution",
+                "Arn"
+              ]
+            }
+          },
+          "DependsOn": [
+            "UploadImageLogGroup"
+          ]
+        },
+        "ListImagesLambdaFunction": {
+          "Type": "AWS::Lambda::Function",
+          "Properties": {
+            "Code": {
+              "S3Bucket": "serverless-framework-deployments-us-east-1-a1ba091e-5054",
+              "S3Key": "serverless/image-upload-service/dev/1743052861339-2025-03-27T05:21:01.339Z/image-upload-service.zip"
+            },
+            "Handler": "src.list_images.list_images",
+            "Runtime": "python3.9",
+            "FunctionName": "image-upload-service-dev-listImages",
+            "MemorySize": 1024,
+            "Timeout": 6,
+            "Role": {
+              "Fn::GetAtt": [
+                "IamRoleLambdaExecution",
+                "Arn"
+              ]
+            }
+          },
+          "DependsOn": [
+            "ListImagesLogGroup"
+          ]
+        },
+        "ViewImageLambdaFunction": {
+          "Type": "AWS::Lambda::Function",
+          "Properties": {
+            "Code": {
+              "S3Bucket": "serverless-framework-deployments-us-east-1-a1ba091e-5054",
+              "S3Key": "serverless/image-upload-service/dev/1743052861339-2025-03-27T05:21:01.339Z/image-upload-service.zip"
+            },
+            "Handler": "src.view_image.view_image",
+            "Runtime": "python3.9",
+            "FunctionName": "image-upload-service-dev-viewImage",
+            "MemorySize": 1024,
+            "Timeout": 6,
+            "Role": {
+              "Fn::GetAtt": [
+                "IamRoleLambdaExecution",
+                "Arn"
+              ]
+            }
+          },
+          "DependsOn": [
+            "ViewImageLogGroup"
+          ]
+        },
+        "DeleteImageLambdaFunction": {
+          "Type": "AWS::Lambda::Function",
+          "Properties": {
+            "Code": {
+              "S3Bucket": "serverless-framework-deployments-us-east-1-a1ba091e-5054",
+              "S3Key": "serverless/image-upload-service/dev/1743052861339-2025-03-27T05:21:01.339Z/image-upload-service.zip"
+            },
+            "Handler": "src.delete_image.delete_image",
+            "Runtime": "python3.9",
+            "FunctionName": "image-upload-service-dev-deleteImage",
+            "MemorySize": 1024,
+            "Timeout": 6,
+            "Role": {
+              "Fn::GetAtt": [
+                "IamRoleLambdaExecution",
+                "Arn"
+              ]
+            }
+          },
+          "DependsOn": [
+            "DeleteImageLogGroup"
+          ]
+        },
+        "UploadImageLambdaVersionW4NLgSUTGyX2SmNRgQaiva8Hf2vgRpu8EIALHbIZUkI": {
+          "Type": "AWS::Lambda::Version",
+          "DeletionPolicy": "Retain",
+          "Properties": {
+            "FunctionName": {
+              "Ref": "UploadImageLambdaFunction"
+            },
+            "CodeSha256": "DG1QZ/ns+iI9JWJoit5z5nWstoaURYQc17Wz49wIgYg="
+          }
+        },
+        "ListImagesLambdaVersionhZuPUN05puc2wXVtixnuKNT16cUIYJ301urnBWWrOTY": {
+          "Type": "AWS::Lambda::Version",
+          "DeletionPolicy": "Retain",
+          "Properties": {
+            "FunctionName": {
+              "Ref": "ListImagesLambdaFunction"
+            },
+            "CodeSha256": "DG1QZ/ns+iI9JWJoit5z5nWstoaURYQc17Wz49wIgYg="
+          }
+        },
+        "ViewImageLambdaVersional4AN5MBO40cZajM5NaDkaczZh3YXVJlHRZ7i3ezJ6g": {
+          "Type": "AWS::Lambda::Version",
+          "DeletionPolicy": "Retain",
+          "Properties": {
+            "FunctionName": {
+              "Ref": "ViewImageLambdaFunction"
+            },
+            "CodeSha256": "DG1QZ/ns+iI9JWJoit5z5nWstoaURYQc17Wz49wIgYg="
+          }
+        },
+        "DeleteImageLambdaVersionuRG2aN2l7vgpRuCNun1qzCZTQ0a2X62DN50njI5d3Os": {
+          "Type": "AWS::Lambda::Version",
+          "DeletionPolicy": "Retain",
+          "Properties": {
+            "FunctionName": {
+              "Ref": "DeleteImageLambdaFunction"
+            },
+            "CodeSha256": "DG1QZ/ns+iI9JWJoit5z5nWstoaURYQc17Wz49wIgYg="
+          }
+        },
+        "ApiGatewayRestApi": {
+          "Type": "AWS::ApiGateway::RestApi",
+          "Properties": {
+            "Name": "dev-image-upload-service",
+            "EndpointConfiguration": {
+              "Types": [
+                "EDGE"
+              ]
+            },
+            "Policy": ""
+          }
+        },
+        "ApiGatewayResourceUpload": {
+          "Type": "AWS::ApiGateway::Resource",
+          "Properties": {
+            "ParentId": {
+              "Fn::GetAtt": [
+                "ApiGatewayRestApi",
+                "RootResourceId"
+              ]
+            },
+            "PathPart": "upload",
+            "RestApiId": {
+              "Ref": "ApiGatewayRestApi"
+            }
+          }
+        },
+        "ApiGatewayResourceImages": {
+          "Type": "AWS::ApiGateway::Resource",
+          "Properties": {
+            "ParentId": {
+              "Fn::GetAtt": [
+                "ApiGatewayRestApi",
+                "RootResourceId"
+              ]
+            },
+            "PathPart": "images",
+            "RestApiId": {
+              "Ref": "ApiGatewayRestApi"
+            }
+          }
+        },
+        "ApiGatewayResourceImagesImageidVar": {
+          "Type": "AWS::ApiGateway::Resource",
+          "Properties": {
+            "ParentId": {
+              "Ref": "ApiGatewayResourceImages"
+            },
+            "PathPart": "{image_id}",
+            "RestApiId": {
+              "Ref": "ApiGatewayRestApi"
+            }
+          }
+        },
+        "ApiGatewayMethodUploadPost": {
+          "Type": "AWS::ApiGateway::Method",
+          "Properties": {
+            "HttpMethod": "POST",
+            "RequestParameters": {},
+            "ResourceId": {
+              "Ref": "ApiGatewayResourceUpload"
+            },
+            "RestApiId": {
+              "Ref": "ApiGatewayRestApi"
+            },
+            "ApiKeyRequired": "<REDACTED>",
+            "AuthorizationType": "NONE",
+            "Integration": {
+              "IntegrationHttpMethod": "POST",
+              "Type": "AWS_PROXY",
+              "Uri": {
+                "Fn::Join": [
+                  "",
+                  [
+                    "arn:",
+                    {
+                      "Ref": "AWS::Partition"
+                    },
+                    ":apigateway:",
+                    {
+                      "Ref": "AWS::Region"
+                    },
+                    ":lambda:path/2015-03-31/functions/",
+                    {
+                      "Fn::GetAtt": [
+                        "UploadImageLambdaFunction",
+                        "Arn"
+                      ]
+                    },
+                    "/invocations"
+                  ]
+                ]
+              }
+            },
+            "MethodResponses": []
+          },
+          "DependsOn": [
+            "UploadImageLambdaPermissionApiGateway"
+          ]
+        },
+        "ApiGatewayMethodImagesGet": {
+          "Type": "AWS::ApiGateway::Method",
+          "Properties": {
+            "HttpMethod": "GET",
+            "RequestParameters": {},
+            "ResourceId": {
+              "Ref": "ApiGatewayResourceImages"
+            },
+            "RestApiId": {
+              "Ref": "ApiGatewayRestApi"
+            },
+            "ApiKeyRequired": "<REDACTED>",
+            "AuthorizationType": "NONE",
+            "Integration": {
+              "IntegrationHttpMethod": "POST",
+              "Type": "AWS_PROXY",
+              "Uri": {
+                "Fn::Join": [
+                  "",
+                  [
+                    "arn:",
+                    {
+                      "Ref": "AWS::Partition"
+                    },
+                    ":apigateway:",
+                    {
+                      "Ref": "AWS::Region"
+                    },
+                    ":lambda:path/2015-03-31/functions/",
+                    {
+                      "Fn::GetAtt": [
+                        "ListImagesLambdaFunction",
+                        "Arn"
+                      ]
+                    },
+                    "/invocations"
+                  ]
+                ]
+              }
+            },
+            "MethodResponses": []
+          },
+          "DependsOn": [
+            "ListImagesLambdaPermissionApiGateway"
+          ]
+        },
+        "ApiGatewayMethodImagesImageidVarGet": {
+          "Type": "AWS::ApiGateway::Method",
+          "Properties": {
+            "HttpMethod": "GET",
+            "RequestParameters": {},
+            "ResourceId": {
+              "Ref": "ApiGatewayResourceImagesImageidVar"
+            },
+            "RestApiId": {
+              "Ref": "ApiGatewayRestApi"
+            },
+            "ApiKeyRequired": "<REDACTED>",
+            "AuthorizationType": "NONE",
+            "Integration": {
+              "IntegrationHttpMethod": "POST",
+              "Type": "AWS_PROXY",
+              "Uri": {
+                "Fn::Join": [
+                  "",
+                  [
+                    "arn:",
+                    {
+                      "Ref": "AWS::Partition"
+                    },
+                    ":apigateway:",
+                    {
+                      "Ref": "AWS::Region"
+                    },
+                    ":lambda:path/2015-03-31/functions/",
+                    {
+                      "Fn::GetAtt": [
+                        "ViewImageLambdaFunction",
+                        "Arn"
+                      ]
+                    },
+                    "/invocations"
+                  ]
+                ]
+              }
+            },
+            "MethodResponses": []
+          },
+          "DependsOn": [
+            "ViewImageLambdaPermissionApiGateway"
+          ]
+        },
+        "ApiGatewayMethodImagesImageidVarDelete": {
+          "Type": "AWS::ApiGateway::Method",
+          "Properties": {
+            "HttpMethod": "DELETE",
+            "RequestParameters": {},
+            "ResourceId": {
+              "Ref": "ApiGatewayResourceImagesImageidVar"
+            },
+            "RestApiId": {
+              "Ref": "ApiGatewayRestApi"
+            },
+            "ApiKeyRequired": "<REDACTED>",
+            "AuthorizationType": "NONE",
+            "Integration": {
+              "IntegrationHttpMethod": "POST",
+              "Type": "AWS_PROXY",
+              "Uri": {
+                "Fn::Join": [
+                  "",
+                  [
+                    "arn:",
+                    {
+                      "Ref": "AWS::Partition"
+                    },
+                    ":apigateway:",
+                    {
+                      "Ref": "AWS::Region"
+                    },
+                    ":lambda:path/2015-03-31/functions/",
+                    {
+                      "Fn::GetAtt": [
+                        "DeleteImageLambdaFunction",
+                        "Arn"
+                      ]
+                    },
+                    "/invocations"
+                  ]
+                ]
+              }
+            },
+            "MethodResponses": []
+          },
+          "DependsOn": [
+            "DeleteImageLambdaPermissionApiGateway"
+          ]
+        },
+        "ApiGatewayDeployment1743052851863": {
+          "Type": "AWS::ApiGateway::Deployment",
+          "Properties": {
+            "RestApiId": {
+              "Ref": "ApiGatewayRestApi"
+            },
+            "StageName": "dev"
+          },
+          "DependsOn": [
+            "ApiGatewayMethodUploadPost",
+            "ApiGatewayMethodImagesGet",
+            "ApiGatewayMethodImagesImageidVarGet",
+            "ApiGatewayMethodImagesImageidVarDelete"
+          ]
+        },
+        "UploadImageLambdaPermissionApiGateway": {
+          "Type": "AWS::Lambda::Permission",
+          "Properties": {
+            "FunctionName": {
+              "Fn::GetAtt": [
+                "UploadImageLambdaFunction",
+                "Arn"
+              ]
+            },
+            "Action": "lambda:InvokeFunction",
+            "Principal": "apigateway.amazonaws.com",
+            "SourceArn": {
+              "Fn::Join": [
+                "",
+                [
+                  "arn:",
+                  {
+                    "Ref": "AWS::Partition"
+                  },
+                  ":execute-api:",
+                  {
+                    "Ref": "AWS::Region"
+                  },
+                  ":",
+                  {
+                    "Ref": "AWS::AccountId"
+                  },
+                  ":",
+                  {
+                    "Ref": "ApiGatewayRestApi"
+                  },
+                  "/*/*"
+                ]
+              ]
+            }
+          }
+        },
+        "ListImagesLambdaPermissionApiGateway": {
+          "Type": "AWS::Lambda::Permission",
+          "Properties": {
+            "FunctionName": {
+              "Fn::GetAtt": [
+                "ListImagesLambdaFunction",
+                "Arn"
+              ]
+            },
+            "Action": "lambda:InvokeFunction",
+            "Principal": "apigateway.amazonaws.com",
+            "SourceArn": {
+              "Fn::Join": [
+                "",
+                [
+                  "arn:",
+                  {
+                    "Ref": "AWS::Partition"
+                  },
+                  ":execute-api:",
+                  {
+                    "Ref": "AWS::Region"
+                  },
+                  ":",
+                  {
+                    "Ref": "AWS::AccountId"
+                  },
+                  ":",
+                  {
+                    "Ref": "ApiGatewayRestApi"
+                  },
+                  "/*/*"
+                ]
+              ]
+            }
+          }
+        },
+        "ViewImageLambdaPermissionApiGateway": {
+          "Type": "AWS::Lambda::Permission",
+          "Properties": {
+            "FunctionName": {
+              "Fn::GetAtt": [
+                "ViewImageLambdaFunction",
+                "Arn"
+              ]
+            },
+            "Action": "lambda:InvokeFunction",
+            "Principal": "apigateway.amazonaws.com",
+            "SourceArn": {
+              "Fn::Join": [
+                "",
+                [
+                  "arn:",
+                  {
+                    "Ref": "AWS::Partition"
+                  },
+                  ":execute-api:",
+                  {
+                    "Ref": "AWS::Region"
+                  },
+                  ":",
+                  {
+                    "Ref": "AWS::AccountId"
+                  },
+                  ":",
+                  {
+                    "Ref": "ApiGatewayRestApi"
+                  },
+                  "/*/*"
+                ]
+              ]
+            }
+          }
+        },
+        "DeleteImageLambdaPermissionApiGateway": {
+          "Type": "AWS::Lambda::Permission",
+          "Properties": {
+            "FunctionName": {
+              "Fn::GetAtt": [
+                "DeleteImageLambdaFunction",
+                "Arn"
+              ]
+            },
+            "Action": "lambda:InvokeFunction",
+            "Principal": "apigateway.amazonaws.com",
+            "SourceArn": {
+              "Fn::Join": [
+                "",
+                [
+                  "arn:",
+                  {
+                    "Ref": "AWS::Partition"
+                  },
+                  ":execute-api:",
+                  {
+                    "Ref": "AWS::Region"
+                  },
+                  ":",
+                  {
+                    "Ref": "AWS::AccountId"
+                  },
+                  ":",
+                  {
+                    "Ref": "ApiGatewayRestApi"
+                  },
+                  "/*/*"
+                ]
+              ]
+            }
+          }
+        },
+        "ImagesBucket": {
+          "Type": "AWS::S3::Bucket",
+          "Properties": {
+            "BucketName": "mc-image-insta-uploaders"
+          }
+        },
+        "ImagesTable": {
+          "Type": "AWS::DynamoDB::Table",
+          "Properties": {
+            "TableName": "ImagesMetadata",
+            "AttributeDefinitions": [
+              {
+                "AttributeName": "ImageID",
+                "AttributeType": "S"
+              }
+            ],
+            "KeySchema": [
+              {
+                "AttributeName": "ImageID",
+                "KeyType": "HASH"
+              }
+            ],
+            "ProvisionedThroughput": {
+              "ReadCapacityUnits": 5,
+              "WriteCapacityUnits": 5
+            }
+          }
+        }
+      },
+      "Outputs": {
+        "ServerlessDeploymentBucketName": {
+          "Value": "serverless-framework-deployments-us-east-1-a1ba091e-5054",
+          "Export": {
+            "Name": "sls-image-upload-service-dev-ServerlessDeploymentBucketName"
+          }
+        },
+        "UploadImageLambdaFunctionQualifiedArn": {
+          "Description": "Current Lambda function version",
+          "Value": {
+            "Ref": "UploadImageLambdaVersionW4NLgSUTGyX2SmNRgQaiva8Hf2vgRpu8EIALHbIZUkI"
+          },
+          "Export": {
+            "Name": "sls-image-upload-service-dev-UploadImageLambdaFunctionQualifiedArn"
+          }
+        },
+        "ListImagesLambdaFunctionQualifiedArn": {
+          "Description": "Current Lambda function version",
+          "Value": {
+            "Ref": "ListImagesLambdaVersionhZuPUN05puc2wXVtixnuKNT16cUIYJ301urnBWWrOTY"
+          },
+          "Export": {
+            "Name": "sls-image-upload-service-dev-ListImagesLambdaFunctionQualifiedArn"
+          }
+        },
+        "ViewImageLambdaFunctionQualifiedArn": {
+          "Description": "Current Lambda function version",
+          "Value": {
+            "Ref": "ViewImageLambdaVersional4AN5MBO40cZajM5NaDkaczZh3YXVJlHRZ7i3ezJ6g"
+          },
+          "Export": {
+            "Name": "sls-image-upload-service-dev-ViewImageLambdaFunctionQualifiedArn"
+          }
+        },
+        "DeleteImageLambdaFunctionQualifiedArn": {
+          "Description": "Current Lambda function version",
+          "Value": {
+            "Ref": "DeleteImageLambdaVersionuRG2aN2l7vgpRuCNun1qzCZTQ0a2X62DN50njI5d3Os"
+          },
+          "Export": {
+            "Name": "sls-image-upload-service-dev-DeleteImageLambdaFunctionQualifiedArn"
+          }
+        },
+        "ServiceEndpoint": {
+          "Description": "URL of the service endpoint",
+          "Value": {
+            "Fn::Join": [
+              "",
+              [
+                "https://",
+                {
+                  "Ref": "ApiGatewayRestApi"
+                },
+                ".execute-api.",
+                {
+                  "Ref": "AWS::Region"
+                },
+                ".",
+                {
+                  "Ref": "AWS::URLSuffix"
+                },
+                "/dev"
+              ]
+            ]
+          },
+          "Export": {
+            "Name": "sls-image-upload-service-dev-ServiceEndpoint"
+          }
+        }
+      }
+    }
   }
 }
